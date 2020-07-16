@@ -14,6 +14,7 @@ from models.Dataloader import CustomDatasetDataLoader
 from models.IPEC_model import IPECNet
 from loss.Loss import KL_loss
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 def SetSeed(seed):
@@ -35,15 +36,14 @@ def train_epoch(model, optimizer, criterion, data_loader, device, config):
     for idx, (x,y,i,j,key) in enumerate(data_loader):
         x = x.to(device).float()
         y = y.to(device).float().view(-1,1)
-        if (y<0).any():
-            print('NO')
 
         optimizer.zero_grad()
+        x[torch.isnan(x)]=0
         out = model(x)
-        loss = criterion(y, out)
+
+        loss = criterion(F.sigmoid(out).view(-1),(y>0.1).float().view(-1))
         loss.backward()
         optimizer.step()
-
         pred = out.detach()
 
         loss_meter.add(loss.item())
@@ -56,34 +56,35 @@ def train_epoch(model, optimizer, criterion, data_loader, device, config):
     return epoch_metrics
 
 
-# def evaluation(model, criterion, loader, device, config, mode='val'):
-#     y_true = []
-#     y_pred = []
+def evaluation(model, criterion, loader, device, config, mode='val'):
+    y_true = []
+    y_pred = []
 
-#     acc_meter = tnt.meter.ClassErrorMeter(accuracy=True)
-#     loss_meter = tnt.meter.AverageValueMeter()
+    acc_meter = tnt.meter.ClassErrorMeter(accuracy=True)
+    loss_meter = tnt.meter.AverageValueMeter()
 
-#     for (x, y) in loader:
-#         y_true.extend(list(map(int, y)))
-#         x = x.to(device)
-#         y = y.to(device)
+    for idx, (x,y,i,j,key) in enumerate(loader):
+        y_true.extend(list(map(int, y)))
+        x = x.to(device).float()
+        y = y.to(device).float().view(-1,1)
 
-#         with torch.no_grad():
-#             prediction = model(x)
-#             loss = criterion(prediction, y)
+        with torch.no_grad():
+            prediction = model(x)
+            loss = criterion(F.sigmoid(prediction), (y>0.1).float().view(-1))
 
-#         acc_meter.add(prediction, y)
-#         loss_meter.add(loss.item())
+        acc_meter.add(prediction, y)
+        loss_meter.add(loss.item())
 
-#         y_p = prediction.argmax(dim=1).cpu().numpy()
-#         y_pred.extend(list(y_p))
+        y_p = prediction.argmax(dim=1).cpu().numpy()
+        y_pred.extend(list(y_p))
 
-#     metrics = {'{}_loss'.format(mode): loss_meter.value()[0]}
+    metrics = {'{}_loss'.format(mode): loss_meter.value()[0]}
 
-#     if mode == 'val':
-#         return metrics
-#     elif mode == 'test':
-#         return metrics
+    if mode == 'val':
+        return metrics
+    elif mode == 'test':
+        return metrics
+
 
 
 def save_results(epoch, metrics, config):
@@ -94,15 +95,16 @@ def save_results(epoch, metrics, config):
 
 def main(config):
     device = torch.device(config['device'])
-    train_loader=CustomDatasetDataLoader(batchSize=config['batch_size'],mode='train')
-    # val_loader=CustomDatasetDataLoader(mode='val')
-    # test_loader=CustomDatasetDataLoader(mode='test')
+    train_loader=CustomDatasetDataLoader(batchSize=config['batch_size'], task='identification', mode='train')
+    val_loader=CustomDatasetDataLoader(batchSize=config['batch_size'], task='identification',mode='val')
+    test_loader=CustomDatasetDataLoader(batchSize=config['batch_size'], task='identification',mode='test')
 
     model=IPECNet(nc=[1,16,16,32,32],padding_type='zero',norm_layer=nn.BatchNorm2d)
     model = model.to(device)
     optimizer = torch.optim.Adam(model.parameters(),lr=config['lr'])
+    criterion = nn.BCELoss()
     # criterion = nn.CrossEntropyLoss()
-    criterion = KL_loss(w=0)
+    # criterion = KL_loss(w=0)
 
     trainlog = {}
     best_score = 0
@@ -112,29 +114,29 @@ def main(config):
         model.train()
         train_metrics = train_epoch(model, optimizer, criterion, train_loader, device=device, config=config)
 
-        # print('Validation . . . ')
-        # model.eval()
-        # val_metrics = evaluation(model, criterion, val_loader, device=device, config=config, mode='val')
+        print('Validation . . . ')
+        model.eval()
+        val_metrics = evaluation(model, criterion, val_loader, device=device, config=config, mode='val')
 
-        # print('Loss {:.4f},  Score {:.2f}'.format(val_metrics['val_loss'], val_metrics['score']))
+        print('Loss {:.4f},  Score {:.2f}'.format(val_metrics['val_loss'], val_metrics['score']))
 
-        # trainlog[epoch] = {**train_metrics, **val_metrics}
+        trainlog[epoch] = {**train_metrics, **val_metrics}
         
 
-        # if val_metrics['Acc'] >= best_score:
-        #     best_score = val_metrics['score']
-        #     torch.save({'epoch': epoch, 'state_dict': model.state_dict(),
-        #                 'optimizer': optimizer.state_dict()},
-        #                 os.path.join(config['res_dir'], 'Epoch_{}'.format(epoch + 1), 'model.pth.tar'))
+        if True:
+            best_score = val_metrics['score']
+            torch.save({'epoch': epoch, 'state_dict': model.state_dict(),
+                        'optimizer': optimizer.state_dict()},
+                        os.path.join(config['res_dir'], 'Epoch_{}'.format(epoch + 1), 'model.pth.tar'))
 
-    # print('Testing best epoch . . .')
-    # model.load_state_dict(
-    #     torch.load(os.path.join(config['res_dir'], 'Epoch_{}'.format(epoch + 1), 'model.pth.tar'))['state_dict'])
-    # model.eval()
+    print('Testing best epoch . . .')
+    model.load_state_dict(
+        torch.load(os.path.join(config['res_dir'], 'Epoch_{}'.format(epoch + 1), 'model.pth.tar'))['state_dict'])
+    model.eval()
 
-    # test_metrics = evaluation(model, criterion, test_loader, device=device, mode='test', config=config)
+    test_metrics = evaluation(model, criterion, test_loader, device=device, mode='test', config=config)
 
-    # print('Loss {:.4f},  Acc {:.2f}'.format(test_metrics['test_loss'], test_metrics['test_accuracy']))
+    print('Loss {:.4f},  Acc {:.2f}'.format(test_metrics['test_loss'], test_metrics['test_accuracy']))
 
 
 
@@ -150,8 +152,8 @@ if __name__ == '__main__':
 
 
     # Training parameters
-    parser.add_argument('--epochs', default=100, type=int, help='Number of epochs per fold')
-    parser.add_argument('--batch_size', default=128, type=int, help='Batch size')
+    parser.add_argument('--epochs', default=1, type=int, help='Number of epochs per fold')
+    parser.add_argument('--batch_size', default=512, type=int, help='Batch size')
     parser.add_argument('--lr', default=0.001, type=float, help='Learning rate')
     
     args = parser.parse_args()

@@ -22,8 +22,8 @@ class IPECNet(nn.Module):
         CH1=X[:,0,:,:].view(-1,1,29,29)
         CH2=X[:,1,:,:].view(-1,1,29,29)
         CH3=X[:,2,:,:].view(-1,1,29,29)
-        CH4=X[:,3,:,:].view(-1,1,29,29)
-        CH5=X[:,4,:,:].view(-1,1,29,29)
+        CH4=CH1-CH2
+        CH5=CH2-CH3
         feature1=self.pooling(self.head1(CH1))
         feature2=self.pooling(self.head2(CH2))
         feature3=self.pooling(self.head3(CH3))
@@ -32,7 +32,7 @@ class IPECNet(nn.Module):
 
         feature=torch.cat([feature1,feature2,feature3,feature4,feature5],dim=1)
         y=self.fc(feature.view(N,-1))
-        y=F.relu(y)
+        
         return y
 
 
