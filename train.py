@@ -72,11 +72,14 @@ def evaluation(model, criterion, loader, device, config, mode='val'):
             prediction = model(x)
             loss = criterion(F.sigmoid(prediction), (y>0.1).float().view(-1))
 
-        acc_meter.add(prediction, y)
+        y_pred=F.sigmoid(prediction.view(-1))>0
+        y_pred2=torch.zeros(y_pred.shape[0],2).to(device)
+        y_pred2[y_pred==1]=1
+        y=y.view(-1)>0.1
+        acc_meter.add(y_pred2, y)
         loss_meter.add(loss.item())
 
-        y_p = prediction.argmax(dim=1).cpu().numpy()
-        y_pred.extend(list(y_p))
+        y_pred.extend(y.detach().cpu().numpy().tolist())
 
     metrics = {'{}_loss'.format(mode): loss_meter.value()[0]}
 
@@ -100,7 +103,7 @@ def main(config):
     test_loader=CustomDatasetDataLoader(batchSize=config['batch_size'], task='identification',mode='test')
 
     model=IPECNet(nc=[1,16,16,32,32],padding_type='zero',norm_layer=nn.BatchNorm2d)
-    model = model.to(device)
+    model = torch.nn.DataParallel(model.to(device), device_ids=[0, 1,  2, 3])
     optimizer = torch.optim.Adam(model.parameters(),lr=config['lr'])
     criterion = nn.BCELoss()
     # criterion = nn.CrossEntropyLoss()
@@ -140,6 +143,7 @@ def main(config):
 
 
 
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
@@ -153,7 +157,7 @@ if __name__ == '__main__':
 
     # Training parameters
     parser.add_argument('--epochs', default=1, type=int, help='Number of epochs per fold')
-    parser.add_argument('--batch_size', default=512, type=int, help='Batch size')
+    parser.add_argument('--batch_size', default=1024, type=int, help='Batch size')
     parser.add_argument('--lr', default=0.001, type=float, help='Learning rate')
     
     args = parser.parse_args()
