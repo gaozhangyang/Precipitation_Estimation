@@ -112,7 +112,7 @@ if __name__ =='__main__':
     parser.add_argument('--server', type=str,default='ftp.bou.class.noaa.gov')
     parser.add_argument('--cd_path', type=str,default='155954/7338375394')
     parser.add_argument('--save_file',type=str,default='./IR_2014')
-    parser.add_argument('--pnum',type=int,default=30,'the number of subprocess')
+    parser.add_argument('--pnum',type=int,default=30,help='the number of subprocess')
     args = parser.parse_args()
     pnum=args.pnum
     # name=args.name

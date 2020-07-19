@@ -15,6 +15,8 @@ from models.IPEC_model import IPECNet
 from loss.Loss import KL_loss
 import torch.nn as nn
 import torch.nn.functional as F
+from models.Meters import BinaryClsMeter
+from pathlib import Path
 
 
 def SetSeed(seed):
@@ -60,7 +62,7 @@ def evaluation(model, criterion, loader, device, config, mode='val'):
     y_true = []
     y_pred = []
 
-    acc_meter = tnt.meter.ClassErrorMeter(accuracy=True)
+    acc_meter = BinaryClsMeter()
     loss_meter = tnt.meter.AverageValueMeter()
 
     for idx, (x,y,i,j,key) in enumerate(loader):
@@ -69,19 +71,14 @@ def evaluation(model, criterion, loader, device, config, mode='val'):
         y = y.to(device).float().view(-1,1)
 
         with torch.no_grad():
-            prediction = model(x)
-            loss = criterion(F.sigmoid(prediction), (y>0.1).float().view(-1))
+            prediction = F.sigmoid( model(x) )
+            loss = criterion( prediction, (y>0.1).float().view(-1))
 
-        y_pred=F.sigmoid(prediction.view(-1))>0
-        y_pred2=torch.zeros(y_pred.shape[0],2).to(device)
-        y_pred2[y_pred==1]=1
-        y=y.view(-1)>0.1
-        acc_meter.add(y_pred2, y)
+        acc_meter.add(prediction>0.5, y>0.1)
         loss_meter.add(loss.item())
 
-        y_pred.extend(y.detach().cpu().numpy().tolist())
-
-    metrics = {'{}_loss'.format(mode): loss_meter.value()[0]}
+    metrics = {'{}_loss'.format(mode): loss_meter.value()[0],
+               '{}_score'.format(mode): acc_meter.value()}
 
     if mode == 'val':
         return metrics
@@ -103,7 +100,7 @@ def main(config):
     test_loader=CustomDatasetDataLoader(batchSize=config['batch_size'], task='identification',mode='test')
 
     model=IPECNet(nc=[1,16,16,32,32],padding_type='zero',norm_layer=nn.BatchNorm2d)
-    model = torch.nn.DataParallel(model.to(device), device_ids=[0, 1,  2, 3])
+    model = torch.nn.DataParallel(model.to(device), device_ids=[0,1,2,3])
     optimizer = torch.optim.Adam(model.parameters(),lr=config['lr'])
     criterion = nn.BCELoss()
     # criterion = nn.CrossEntropyLoss()
@@ -121,27 +118,25 @@ def main(config):
         model.eval()
         val_metrics = evaluation(model, criterion, val_loader, device=device, config=config, mode='val')
 
-        print('Loss {:.4f},  Score {:.2f}'.format(val_metrics['val_loss'], val_metrics['score']))
+        print('Loss {:.4f},  Score {:.2f}'.format(val_metrics['val_loss'], val_metrics['val_score']))
 
         trainlog[epoch] = {**train_metrics, **val_metrics}
         
 
         if True:
-            best_score = val_metrics['score']
+            best_score = val_metrics['val_score']
             torch.save({'epoch': epoch, 'state_dict': model.state_dict(),
                         'optimizer': optimizer.state_dict()},
-                        os.path.join(config['res_dir'], 'Epoch_{}'.format(epoch + 1), 'model.pth.tar'))
+                        os.path.join(config['res_dir'], 'Epoch_{}.pth.tar'.format(epoch + 1)))
 
     print('Testing best epoch . . .')
     model.load_state_dict(
-        torch.load(os.path.join(config['res_dir'], 'Epoch_{}'.format(epoch + 1), 'model.pth.tar'))['state_dict'])
+        torch.load(os.path.join(config['res_dir'], 'Epoch_{}.pth.tar'.format(epoch + 1) ))['state_dict'])
     model.eval()
 
     test_metrics = evaluation(model, criterion, test_loader, device=device, mode='test', config=config)
 
-    print('Loss {:.4f},  Acc {:.2f}'.format(test_metrics['test_loss'], test_metrics['test_accuracy']))
-
-
+    print('Loss {:.4f},  Acc {:.2f}'.format(test_metrics['test_loss'], test_metrics['test_score']))
 
 
 if __name__ == '__main__':
@@ -153,6 +148,7 @@ if __name__ == '__main__':
     parser.add_argument('--rdm_seed', default=1, type=int, help='Random seed')
     parser.add_argument('--display_step', default=10, type=int,
                         help='Interval in batches between display of training metrics')
+    parser.add_argument('--res_dir', default='./results', type=str)
 
 
     # Training parameters
@@ -162,6 +158,8 @@ if __name__ == '__main__':
     
     args = parser.parse_args()
     config = args.__dict__
+    res=Path(config['res_dir'])
+    res.mkdir(parents=True, exist_ok=True )
     SetSeed(config['rdm_seed'])
     pprint.pprint(config)
     main(config)

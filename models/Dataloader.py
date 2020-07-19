@@ -12,26 +12,9 @@ import numpy as np
 import random
 import os
 
-
-GOSE=np.load('/usr/commondata/weather/New/WCE/GOSE.npy',allow_pickle=True).item()
-StageIV=np.load('/usr/commondata/weather/New/WCE/StageIV.npy',allow_pickle=True).item()
-
-def date2num(start_date,end_dates):
-    result=[]
-    for T in end_dates:
-        end_date = date(int(T[:4]), int(T[4:6]), int(T[6:8]))
-        delta = (end_date - start_date)
-        day=delta.days
-        hour=T[8:]
-        result.append('{}.{}'.format(day,hour))
-    return result
-    
-start_date = date(2011, 12, 31)
-end_dates=list(StageIV.keys())
-StageIV_keys=date2num(start_date,end_dates)
-for i in range(len(StageIV_keys)):
-    StageIV[StageIV_keys[i]]=StageIV.pop(end_dates[i])
-
+root_path='/usr/commondata/weather/IR_data/IR_dataset_QingHua/'
+GOSE=np.load(root_path+'X_train_hourly.npz')['arr_0']
+StageIV=np.load(root_path+'Y_train_hourly.npz')['arr_0']
 
 
 class IRDataset(Dataset):
@@ -39,22 +22,17 @@ class IRDataset(Dataset):
         self.X=GOSE
         self.Y=StageIV
         
-        
-        if not os.path.exists('/usr/commondata/weather/New/WCE/R_samples.npy'):
-            R_samples,NR_samples=self.get_samples(GOSE,StageIV)
-            self.save_samples(R_samples,NR_samples)
-        
-        self.R_samples=np.load('/usr/commondata/weather/New/WCE/R_samples.npy')
-        self.NR_samples=np.load('/usr/commondata/weather/New/WCE/NR_samples.npy')
+        self.R_samples=np.load('/usr/commondata/weather/New/WCE/R_samples_toy.npy')
+        self.NR_samples=np.load('/usr/commondata/weather/New/WCE/NR_samples_toy.npy')
         
         
         if task=='identification':
-            R_samples=np.array(random.choices(self.R_samples,k=340000))
-            NR_samples=np.array(random.choices(self.NR_samples,k=340000))
+            R_samples=np.array(random.choices(self.R_samples,k=3400))
+            NR_samples=np.array(random.choices(self.NR_samples,k=3400))
         
         if task=='estimation':
-            R_samples=np.array(random.choices(self.R_samples,k=340000))
-            NR_samples=np.array(random.choices(self.NR_samples,k=340000))
+            R_samples=np.array(random.choices(self.R_samples,k=3400))
+            NR_samples=np.array(random.choices(self.NR_samples,k=3400))
         
         self.samples=np.vstack([R_samples,NR_samples])
         np.random.shuffle(self.samples)
@@ -96,41 +74,6 @@ class IRDataset(Dataset):
             if startx<0 or starty<0 or endx>=H or endy>=H:
                 return None
             return img[startx:endx,starty:endy]
-    
-    @classmethod
-    def sampling(self,key,img):
-        R_samples=[]
-        NR_samples=[]
-        for i in range(0,img.shape[0],15):
-            for j in range(0,img.shape[1],15):
-                Y=self.crop_center(img,i,j,14,14)
-                if Y is not None:
-                    if Y[14,14]>0.1:
-                        R_samples.append((key,i,j))
-                    else:
-                        NR_samples.append((key,i,j))
-        return R_samples,NR_samples
-    
-    @classmethod
-    def get_samples(self,GOSE,StageIV):
-        useful_keys=list(set(GOSE.keys())&set(StageIV.keys()))
-        useful_keys=sorted(useful_keys)
-        
-        R_samples=[]
-        NR_samples=[]
-        for key in tqdm.tqdm(useful_keys):
-            R_samples_tmp,NR_samples_tmp=self.sampling(key,StageIV[key])
-            R_samples+=R_samples_tmp
-            NR_samples+=NR_samples_tmp
-        return R_samples,NR_samples
-    
-    @classmethod
-    def save_samples(self,R_samples,NR_samples):
-        R_samples=np.array(R_samples)
-        NR_samples=np.array(NR_samples)
-        np.save('/usr/commondata/weather/New/WCE/R_samples.npy',R_samples)
-        np.save('/usr/commondata/weather/New/WCE/NR_samples.npy',NR_samples)
-        
 
     def __getitem__(self, idx):
         key,i,j=self.samples[idx]
@@ -172,3 +115,8 @@ class CustomDatasetDataLoader(object):
 
     def name(self):
         return 'CustomDatasetDataLoader'
+
+
+if __name__ =='__main__':
+    dataloader=CustomDatasetDataLoader(1024)
+    print()
