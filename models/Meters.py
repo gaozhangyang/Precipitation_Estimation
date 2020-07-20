@@ -1,5 +1,7 @@
 
 import torch
+from sklearn.metrics import confusion_matrix
+import numpy as np
 
 class BinaryClsMeter(object):
     '''Meters provide a way to keep track of important statistics in an online manner.
@@ -14,6 +16,8 @@ class BinaryClsMeter(object):
         '''Resets the meter to default settings.'''
         self.N=0
         self.pos=0
+        self.y_true=[]
+        self.y_pred=[]
 
 
     def add(self, pred,target):
@@ -25,6 +29,9 @@ class BinaryClsMeter(object):
         '''
         self.N+=pred.shape[0]
         self.pos+=torch.sum(pred==target).detach().cpu().numpy()
+        self.y_true+=target.detach().cpu().numpy().tolist()
+        self.y_pred+=pred.detach().cpu().numpy().tolist()
+
 
 
     def value(self):
@@ -32,4 +39,10 @@ class BinaryClsMeter(object):
         if self.N==0:
             return 0
         else:
-            return self.pos/self.N
+            tn, fp, fn, tp=confusion_matrix(self.y_true,self.y_pred ).ravel()
+            POD=tp/(tp+fn)
+            FAR=fp/(tp+fp)
+            CSI=tp/(tp+fn+fp)
+            acc0=tp/(tp+fn)
+            acc1=tn/(tn+fp)
+            return acc0, acc1, POD, FAR, CSI, 

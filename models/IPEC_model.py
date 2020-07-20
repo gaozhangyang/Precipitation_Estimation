@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class IPECNet(nn.Module):
-    def __init__(self,nc,padding_type,norm_layer):
+    def __init__(self,nc,padding_type,norm_layer,task='identification'):
         super(IPECNet, self).__init__()
         self.head1=nn.Sequential(*[ResnetBlock(nc[i],nc[i+1],padding_type,norm_layer) for i in range(len(nc)-1)])
         self.head2=nn.Sequential(*[ResnetBlock(nc[i],nc[i+1],padding_type,norm_layer) for i in range(len(nc)-1)])
@@ -13,7 +13,9 @@ class IPECNet(nn.Module):
         self.head5=nn.Sequential(*[ResnetBlock(nc[i],nc[i+1],padding_type,norm_layer) for i in range(len(nc)-1)])
 
         self.pooling=nn.MaxPool2d(2)
-        self.fc=nn.Linear(5*32*14*14,1)
+        self.fc1=nn.Linear(5*32*14*14,1)
+        self.fc2=nn.Linear(5*32*14*14,2)
+        self.task=task
         
         
     
@@ -31,8 +33,13 @@ class IPECNet(nn.Module):
         feature5=self.pooling(self.head5(CH5))
 
         feature=torch.cat([feature1,feature2,feature3,feature4,feature5],dim=1)
-        y=self.fc(feature.view(N,-1))
         
+        if self.task=='identification':
+            y=self.fc2(feature.view(N,-1))
+        
+        if self.task=='estimation':
+            y=self.fc1(feature.view(N,-1))
+
         return y
 
 

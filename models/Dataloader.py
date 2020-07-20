@@ -17,47 +17,62 @@ GOSE=np.load(root_path+'X_train_hourly.npz')['arr_0']
 StageIV=np.load(root_path+'Y_train_hourly.npz')['arr_0']
 
 
-class IRDataset(Dataset):
-    def __init__(self,task='identification',mode='train',balance=True):
+class IR_Split:
+    def __init__(self,task='identification',shuffle=False,win_size=14):
         self.X=GOSE
         self.Y=StageIV
+        self.win_size=win_size
+        self.task=task
+        self.shuffle=shuffle
         
-        self.R_samples=np.load('/usr/commondata/weather/New/WCE/R_samples_toy.npy')
-        self.NR_samples=np.load('/usr/commondata/weather/New/WCE/NR_samples_toy.npy')
+    
+    def split_R_NR(self,StageIV):
+        R_samples=[]
+        NR_samples=[]
+        for T in range(StageIV.shape[0]):
+            for row in range(self.win_size,StageIV.shape[1]-self.win_size,self.win_size):
+                for col in range(self.win_size,StageIV.shape[2]-self.win_size,self.win_size):
+                    if StageIV[T,row,col]>0.1:
+                        R_samples.append((T,row,col))
+                    else:
+                        NR_samples.append((T,row,col))
+                        
+        R_samples=np.array(R_samples)
+        NR_samples=np.array(NR_samples)
+        return R_samples,NR_samples
+    
+    def split_dataset(self,sp1=0.6,sp2=0.8):
+        self.R_samples,self.NR_samples=self.split_R_NR(self.Y)
         
+        if self.task=='identification':
+            self.samples=np.vstack([np.array(random.choices(self.R_samples,k=340000)),
+                                    np.array(random.choices(self.NR_samples,k=340000))])
         
-        if task=='identification':
-            R_samples=np.array(random.choices(self.R_samples,k=3400))
-            NR_samples=np.array(random.choices(self.NR_samples,k=3400))
+        if self.task=='estimation':
+            self.samples=np.array(random.choices(self.R_samples,k=470000))
         
-        if task=='estimation':
-            R_samples=np.array(random.choices(self.R_samples,k=3400))
-            NR_samples=np.array(random.choices(self.NR_samples,k=3400))
-        
-        self.samples=np.vstack([R_samples,NR_samples])
-        np.random.shuffle(self.samples)
+        if self.shuffle:
+            np.random.shuffle(self.samples)
         L=len(self.samples)
         
         
-        self.mode=mode
-        if mode=='train':
-            self.sample_idx=range(0,int(L*0.6))
+        self.train_sample_idx=range(0,int(L*sp1))
+        self.test_sample_idx=range(int(L*sp1),int(L*sp2))
+        self.val_sample_idx=range(int(L*sp2),int(L*1))
         
-        if mode=='test':
-            self.sample_idx=range(int(L*0.6),int(L*0.8))
-        
-        if mode=='val':
-            self.sample_idx=range(int(L*0.8),int(L*1))
-        
-        self.L=len(self.sample_idx)
-        
-        
-        self.mean=np.array([407.1981814386521,905.3917506083453,1041.6140561764744]).reshape(-1,1)
-        self.std_var=np.sqrt(np.array([412.5176029578715,20423.3857524064,16250.988775375401])).reshape(-1,1)
+        return self.samples, self.train_sample_idx, self.test_sample_idx, self.val_sample_idx
+
+
+class IRDataset(Dataset):
+    def __init__(self,samples,win_size=14):
+        self.X=GOSE
+        self.Y=StageIV
+        self.win_size=win_size
+        self.samples=samples
+        self.L=len(self.samples)
 
     
-    @classmethod
-    def crop_center(self,img,x,y,cropx,cropy):
+    def safe_crop_center(self,img,x,y,cropx,cropy):
         startx = x-(cropx)
         endx=x+(cropx)+1
         starty = y-(cropy)   
@@ -74,16 +89,25 @@ class IRDataset(Dataset):
             if startx<0 or starty<0 or endx>=H or endy>=H:
                 return None
             return img[startx:endx,starty:endy]
+    
+
+    def unsafe_crop_center(self,img,x,y,cropx,cropy):
+        startx = x-(cropx)
+        endx=x+(cropx)+1
+        starty = y-(cropy)   
+        endy= y+(cropy)+1
+        if len(img.shape)==2:
+            return img[startx:endx,starty:endy]
+        
+        if len(img.shape)==3:
+            return img[:,startx:endx,starty:endy]
+        
 
     def __getitem__(self, idx):
-        key,i,j=self.samples[idx]
-        X,Y=self.X[key],self.Y[key]
-        i,j=int(i),int(j)
-        X_croped=self.crop_center(X,i,j,14,14)
-        Y_croped=Y[i,j]
-        for chennel in range(3):
-            X_croped[chennel,:,:]=(X_croped[chennel,:,:]-self.mean[chennel])/self.std_var[chennel]
-        return X_croped,Y_croped,i,j,key
+        T,row,col=self.samples[idx]
+        X_croped=self.unsafe_crop_center(self.X[T],row,col,self.win_size,self.win_size)
+        Y_croped=self.Y[T,row,col]
+        return X_croped,Y_croped,T,row,col
 
 
     def __len__(self):
@@ -95,8 +119,8 @@ class IRDataset(Dataset):
 
 
 class CustomDatasetDataLoader(object):
-    def __init__(self, batchSize, nThreads=8, task='identification', mode='train'):
-        self.dataset = IRDataset(task,mode)
+    def __init__(self, batchSize,selected_samples,win_size, nThreads=8):
+        self.dataset = IRDataset(selected_samples,win_size)
         self.batchSize = batchSize
 
         self.dataloader = torch.utils.data.DataLoader(
@@ -118,5 +142,7 @@ class CustomDatasetDataLoader(object):
 
 
 if __name__ =='__main__':
-    dataloader=CustomDatasetDataLoader(1024)
+    IRS=IR_Split(task='identification',shuffle=True,win_size=14)
+    samples, train_sample_idx, test_sample_idx, val_sample_idx = IRS.split_dataset()
+    dataloader=CustomDatasetDataLoader(1024,samples[train_sample_idx],win_size=14)
     print()

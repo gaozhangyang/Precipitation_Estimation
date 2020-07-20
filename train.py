@@ -10,7 +10,7 @@ import json
 import pickle as pkl
 import argparse
 import pprint
-from models.Dataloader import CustomDatasetDataLoader
+from models.Dataloader import CustomDatasetDataLoader,IR_Split
 from models.IPEC_model import IPECNet
 from loss.Loss import KL_loss
 import torch.nn as nn
@@ -18,6 +18,7 @@ import torch.nn.functional as F
 from models.Meters import BinaryClsMeter
 from pathlib import Path
 
+OneHot=lambda label,C: torch.zeros(label.shape[0],C).scatter_(1,label.view(-1,1),1)
 
 def SetSeed(seed):
     """function used to set a random seed
@@ -31,29 +32,38 @@ def SetSeed(seed):
     np.random.seed(SEED)
 
 def train_epoch(model, optimizer, criterion, data_loader, device, config):
+    acc_meter = BinaryClsMeter()
     loss_meter = tnt.meter.AverageValueMeter()
     y_true = []
     y_pred = []
 
     for idx, (x,y,i,j,key) in enumerate(data_loader):
         x = x.to(device).float()
-        y = y.to(device).float().view(-1,1)
+        y = (y>0.1).to(device).long().view(-1)
 
         optimizer.zero_grad()
         x[torch.isnan(x)]=0
         out = model(x)
 
-        loss = criterion(F.sigmoid(out).view(-1),(y>0.1).float().view(-1))
+        # loss = criterion( out.view(-1),(y>0.1).float().view(-1) )
+        loss = criterion(out,y)
         loss.backward()
         optimizer.step()
-        pred = out.detach()
 
+        acc_meter.add(torch.argmax(out,dim=1), y)
         loss_meter.add(loss.item())
 
         if (idx + 1) % config['display_step'] == 0:
             print('Step [{}/{}], Loss: {:.4f}'.format(idx + 1, len(data_loader), loss_meter.value()[0]))
 
-    epoch_metrics = {'train_loss': loss_meter.value()[0]}
+    indicate=acc_meter.value()
+    epoch_metrics = {'train_loss': loss_meter.value()[0],
+                     'train_acc0': indicate[0],
+                     'train_acc1': indicate[1],
+                     'train_POD': indicate[2],
+                     'train_FAR': indicate[3],
+                     'train_CSI': indicate[4]
+                     }
 
     return epoch_metrics
 
@@ -68,17 +78,24 @@ def evaluation(model, criterion, loader, device, config, mode='val'):
     for idx, (x,y,i,j,key) in enumerate(loader):
         y_true.extend(list(map(int, y)))
         x = x.to(device).float()
-        y = y.to(device).float().view(-1,1)
+        y = (y>0.1).to(device).long().view(-1)
 
         with torch.no_grad():
-            prediction = F.sigmoid( model(x) )
-            loss = criterion( prediction, (y>0.1).float().view(-1))
+            x[torch.isnan(x)]=0
+            out = model(x)
+            loss = criterion(out,y.long())
 
-        acc_meter.add(prediction>0.5, y>0.1)
+        acc_meter.add(torch.argmax(out,dim=1), y)
         loss_meter.add(loss.item())
 
+    indicate=acc_meter.value()
     metrics = {'{}_loss'.format(mode): loss_meter.value()[0],
-               '{}_score'.format(mode): acc_meter.value()}
+               '{}_train_acc0'.format(mode): indicate[0],
+               '{}_train_acc1'.format(mode): indicate[1],
+               '{}_POD'.format(mode): indicate[2],
+               '{}_FAR'.format(mode): indicate[3],
+               '{}_CSI'.format(mode): indicate[4],
+               }
 
     if mode == 'val':
         return metrics
@@ -92,19 +109,19 @@ def save_results(epoch, metrics, config):
         json.dump(metrics, outfile, indent=4)
 
 
-
 def main(config):
     device = torch.device(config['device'])
-    train_loader=CustomDatasetDataLoader(batchSize=config['batch_size'], task='identification', mode='train')
-    val_loader=CustomDatasetDataLoader(batchSize=config['batch_size'], task='identification',mode='val')
-    test_loader=CustomDatasetDataLoader(batchSize=config['batch_size'], task='identification',mode='test')
+    
+    IRS=IR_Split(task='identification',shuffle=True,win_size=14)
+    samples, train_sample_idx, test_sample_idx, val_sample_idx = IRS.split_dataset()
+    train_loader= CustomDatasetDataLoader(batchSize=config['batch_size'],selected_samples=samples[train_sample_idx],win_size=14)
+    test_loader = CustomDatasetDataLoader(batchSize=config['batch_size'],selected_samples=samples[test_sample_idx], win_size=14)
+    val_loader  = CustomDatasetDataLoader(batchSize=config['batch_size'],selected_samples=samples[val_sample_idx],  win_size=14)
 
-    model=IPECNet(nc=[1,16,16,32,32],padding_type='zero',norm_layer=nn.BatchNorm2d)
+    model=IPECNet(nc=[1,16,16,32,32],padding_type='zero',norm_layer=nn.BatchNorm2d,task='identification')
     model = torch.nn.DataParallel(model.to(device), device_ids=[0,1,2,3])
     optimizer = torch.optim.Adam(model.parameters(),lr=config['lr'])
-    criterion = nn.BCELoss()
-    # criterion = nn.CrossEntropyLoss()
-    # criterion = KL_loss(w=0)
+    criterion = nn.CrossEntropyLoss()
 
     trainlog = {}
     best_score = 0
@@ -118,13 +135,13 @@ def main(config):
         model.eval()
         val_metrics = evaluation(model, criterion, val_loader, device=device, config=config, mode='val')
 
-        print('Loss {:.4f},  Score {:.2f}'.format(val_metrics['val_loss'], val_metrics['val_score']))
+        print(val_metrics)
 
         trainlog[epoch] = {**train_metrics, **val_metrics}
         
 
         if True:
-            best_score = val_metrics['val_score']
+            print(val_metrics)
             torch.save({'epoch': epoch, 'state_dict': model.state_dict(),
                         'optimizer': optimizer.state_dict()},
                         os.path.join(config['res_dir'], 'Epoch_{}.pth.tar'.format(epoch + 1)))
@@ -136,7 +153,7 @@ def main(config):
 
     test_metrics = evaluation(model, criterion, test_loader, device=device, mode='test', config=config)
 
-    print('Loss {:.4f},  Acc {:.2f}'.format(test_metrics['test_loss'], test_metrics['test_score']))
+    print(test_metrics)
 
 
 if __name__ == '__main__':
