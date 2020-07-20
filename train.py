@@ -85,7 +85,7 @@ def evaluation(model, criterion, loader, device, config, mode='val'):
     acc_meter = BinaryClsMeter()
     loss_meter = tnt.meter.AverageValueMeter()
 
-    for idx, (x,y,i,j,key) in enumerate(loader):
+    for idx, (x,y,T,row,col) in enumerate(loader):
         y_true.extend(list(map(int, y)))
         x = x.to(device).float()
         y = (y>0.1).to(device).long().view(-1)
@@ -129,6 +129,7 @@ def main(config):
                     shuffle=True,
                     win_size=14
                     )
+
     samples, train_sample_idx, test_sample_idx, val_sample_idx = IRS.split_dataset()
 
     train_loader= CustomDatasetDataLoader(  X=GOSE, 
@@ -156,13 +157,22 @@ def main(config):
                                             seed=config['rdm_seed']
                                             )
 
+    samples1=[]
+    for x,y,T,row,col in train_loader:
+        samples1.append((T,row,col))
+    
+
+    samples2=[]
+    for x,y,T,row,col in train_loader:
+        samples2.append((T,row,col))
+    
+    
     model=IPECNet(nc=[1,16,16,32,32],padding_type='zero',norm_layer=nn.BatchNorm2d,task='identification')
     model = torch.nn.DataParallel(model.to(device), device_ids=[0,1,2,3])
     optimizer = torch.optim.Adam(model.parameters(),lr=config['lr'])
     criterion = nn.CrossEntropyLoss()
 
     trainlog = {}
-    best_score = 0
     for epoch in range(1, config['epochs'] + 1):
         print('EPOCH {}/{}'.format(epoch, config['epochs']))
 
