@@ -25,12 +25,13 @@ import os
 
 
 class IR_Split:
-    def __init__(self,X,Y,task='identification',shuffle=False,seed=2020,win_size=14):
+    def __init__(self,X,Y,task='identification',shuffle=False,seed=2020,win_size=14,k_num=340000):
         self.X=X
         self.Y=Y
         self.win_size=win_size
         self.task=task
         self.shuffle=shuffle
+        self.k_num=k_num
         
     
     def split_R_NR(self,StageIV):
@@ -53,23 +54,18 @@ class IR_Split:
         self.R_samples,self.NR_samples=self.split_R_NR(self.Y)
         
         if self.task=='identification':
-            self.samples=np.vstack([np.array(random.choices(self.R_samples,k=340000)),
-                                    np.array(random.choices(self.NR_samples,k=340000))])
+            self.samples=np.vstack([np.array(random.choices(self.R_samples,k=self.k_num)),
+                                    np.array(random.choices(self.NR_samples,k=self.k_num))])
         
         if self.task=='estimation':
-            self.samples=np.array(random.choices(self.R_samples,k=470000))
+            self.samples=np.array(random.choices(self.R_samples,k=self.k_num))
         
         
         if self.shuffle:
             np.random.shuffle(self.samples)
         L=len(self.samples)
         
-        
-        self.train_sample_idx=range(0,int(L*sp1))
-        self.test_sample_idx=range(int(L*sp1),int(L*sp2))
-        self.val_sample_idx=range(int(L*sp2),int(L*1))
-        
-        return self.samples, self.train_sample_idx, self.test_sample_idx, self.val_sample_idx
+        return self.samples
 
 
 class IRDataset(Dataset):

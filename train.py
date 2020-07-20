@@ -33,12 +33,17 @@ from pathlib import Path
 from models.Dataloader import CustomDatasetDataLoader,IR_Split
 from models.IPEC_model import IPECNet
 from models.Meters import BinaryClsMeter
+import json
 
 OneHot=lambda label,C: torch.zeros(label.shape[0],C).scatter_(1,label.view(-1,1),1)
 
-root_path='/usr/commondata/weather/IR_data/IR_dataset_QingHua/'
-GOSE=np.load(root_path+'X_train_hourly.npz')['arr_0']
-StageIV=np.load(root_path+'Y_train_hourly.npz')['arr_0']
+train_path='/usr/commondata/weather/dataset_release/IR_dataset_QingHua/'
+GOSE_train=np.load(train_path+'X_train_hourly.npz')['arr_0']
+StageIV_train=np.load(train_path+'Y_train_hourly.npz')['arr_0']
+
+train_path='/usr/commondata/weather/dataset_release/IR_dataset_QingHua/'
+GOSE_val=np.load(train_path+'X_val_hourly.npz')['arr_0']
+StageIV_val=np.load(train_path+'Y_val_hourly.npz')['arr_0']
 
 
 def train_epoch(model, optimizer, criterion, data_loader, device, config):
@@ -122,36 +127,38 @@ def save_results(epoch, metrics, config):
 def main(config):
     device = torch.device(config['device'])
 
-    IRS=IR_Split(   X=GOSE, 
-                    Y=StageIV,
-                    task='identification',
-                    seed=config['rdm_seed'],
-                    shuffle=True,
-                    win_size=14
-                    )
+    train_samples=IR_Split(     X=GOSE_train, 
+                                Y=StageIV_train,
+                                task='identification',
+                                seed=config['rdm_seed'],
+                                shuffle=True,
+                                win_size=14,
+                                k_num=340000
+                            ).split_dataset()
 
-    samples, train_sample_idx, test_sample_idx, val_sample_idx = IRS.split_dataset()
-
-    train_loader= CustomDatasetDataLoader(  X=GOSE, 
-                                            Y=StageIV,
+    train_loader= CustomDatasetDataLoader(  X=GOSE_train, 
+                                            Y=StageIV_train,
                                             batchSize=config['batch_size'],
-                                            selected_samples=samples[train_sample_idx],
+                                            selected_samples=train_samples,
                                             win_size=14,
                                             nThreads=1,
-                                            seed=config['rdm_seed']
+                                            seed=config['rdm_seed'],
                                             )
-    test_loader = CustomDatasetDataLoader(  X=GOSE, 
-                                            Y=StageIV,
+    
+
+    val_samples=IR_Split(   X=GOSE_val, 
+                            Y=StageIV_val,
+                            task='identification',
+                            seed=config['rdm_seed'],
+                            shuffle=True,
+                            win_size=14,
+                            k_num=10000
+                        ).split_dataset()
+
+    val_loader  = CustomDatasetDataLoader(  X=GOSE_val, 
+                                            Y=StageIV_val,
                                             batchSize=config['batch_size'],
-                                            selected_samples=samples[test_sample_idx], 
-                                            win_size=14,
-                                            nThreads=1,
-                                            seed=config['rdm_seed']
-                                            )
-    val_loader  = CustomDatasetDataLoader(  X=GOSE, 
-                                            Y=StageIV,
-                                            batchSize=config['batch_size'],
-                                            selected_samples=samples[val_sample_idx],  
+                                            selected_samples=val_samples,  
                                             win_size=14,
                                             nThreads=1,
                                             seed=config['rdm_seed']
@@ -192,16 +199,22 @@ def main(config):
             print(val_metrics)
             torch.save({'epoch': epoch, 'state_dict': model.state_dict(),
                         'optimizer': optimizer.state_dict()},
-                        os.path.join(config['res_dir'], 'Epoch_{}.pth.tar'.format(epoch + 1)))
+                        os.path.join(config['res_dir'], 'Epoch_{}.pth.tar'.format(epoch + 1)),
+                        )
 
     print('Testing best epoch . . .')
     model.load_state_dict(
         torch.load(os.path.join(config['res_dir'], 'Epoch_{}.pth.tar'.format(epoch + 1) ))['state_dict'])
     model.eval()
 
-    test_metrics = evaluation(model, criterion, test_loader, device=device, mode='test', config=config)
+    test_metrics = evaluation(model, criterion, val_loader, device=device, mode='test', config=config)
 
     print(test_metrics)
+
+    filename=os.path.join(config['res_dir'], 'loginfo.json')
+    with open(filename,'w') as file_obj:
+        json.dump(  {'train_metrics': trainlog,'test_metrics':test_metrics},
+                    file_obj)
 
 
 if __name__ == '__main__':
@@ -217,7 +230,7 @@ if __name__ == '__main__':
 
 
     # Training parameters
-    parser.add_argument('--epochs', default=30, type=int, help='Number of epochs per fold')
+    parser.add_argument('--epochs', default=100, type=int, help='Number of epochs per fold')
     parser.add_argument('--batch_size', default=1024, type=int, help='Batch size')
     parser.add_argument('--lr', default=0.001, type=float, help='Learning rate')
     
