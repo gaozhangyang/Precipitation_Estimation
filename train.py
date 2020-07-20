@@ -106,8 +106,8 @@ def evaluation(model, criterion, loader, device, config, mode='val'):
 
     indicate=acc_meter.value()
     metrics = {'{}_loss'.format(mode): loss_meter.value()[0],
-               '{}_train_acc0'.format(mode): indicate[0],
-               '{}_train_acc1'.format(mode): indicate[1],
+               '{}_acc0'.format(mode): indicate[0],
+               '{}_acc1'.format(mode): indicate[1],
                '{}_POD'.format(mode): indicate[2],
                '{}_FAR'.format(mode): indicate[3],
                '{}_CSI'.format(mode): indicate[4],
