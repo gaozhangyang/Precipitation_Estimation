@@ -1,5 +1,28 @@
 # dataset
 
+## 文件结构
+- IR
+    - IR_2012_raw
+    - IR_2014_raw
+    - IR_2012_Qinghua
+    - IR_2014_Qinghua
+
+- StageIV
+    - StageIV_raw
+    - StageIV_Qinghua
+
+- dataset
+    - IR_StageIV_Qinghua
+        - X_train_hourly.npz
+        - Y_train_hourly.npz
+        - train.csv
+        - X_test_hourly.npz
+        - Y_test_hourly.npz
+        - test.csv
+        - X_val_hourly.npz
+        - Y_val_hourly.npz
+        - val.csv
+
 ## 1.download
 > https://www.avl.class.noaa.gov/saa/products/search?sub_id=0&datatype_family=GVAR_IMG&submit.x=29&submit.y=8
 

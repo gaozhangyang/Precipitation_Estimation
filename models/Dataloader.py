@@ -1,15 +1,26 @@
-from torch.utils.data import Dataset
-from datetime import date
-from datetime import timedelta
+
 import numpy as np
 import random
 import torch
 
+def SetSeed(seed):
+    """function used to set a random seed
+    Arguments:
+        seed {int} -- seed number, will set to torch, random and numpy
+    """
+    SEED = seed
+    torch.manual_seed(SEED)
+    torch.cuda.manual_seed(SEED)
+    torch.cuda.manual_seed_all(SEED)
+    random.seed(SEED)
+    np.random.seed(SEED)
+
+SetSeed(2020)
+
+
 from torch.utils.data import Dataset
 from datetime import date
 from datetime import timedelta
-import numpy as np
-import random
 import os
 
 root_path='/usr/commondata/weather/IR_data/IR_dataset_QingHua/'
@@ -17,8 +28,10 @@ GOSE=np.load(root_path+'X_train_hourly.npz')['arr_0']
 StageIV=np.load(root_path+'Y_train_hourly.npz')['arr_0']
 
 
+
+
 class IR_Split:
-    def __init__(self,task='identification',shuffle=False,win_size=14):
+    def __init__(self,task='identification',shuffle=False,seed=2020,win_size=14):
         self.X=GOSE
         self.Y=StageIV
         self.win_size=win_size
@@ -64,7 +77,7 @@ class IR_Split:
 
 
 class IRDataset(Dataset):
-    def __init__(self,samples,win_size=14):
+    def __init__(self,samples,win_size=14,seed=2020):
         self.X=GOSE
         self.Y=StageIV
         self.win_size=win_size
@@ -119,8 +132,8 @@ class IRDataset(Dataset):
 
 
 class CustomDatasetDataLoader(object):
-    def __init__(self, batchSize,selected_samples,win_size, nThreads=8):
-        self.dataset = IRDataset(selected_samples,win_size)
+    def __init__(self, batchSize,selected_samples,win_size, nThreads=8,seed=2020):
+        self.dataset = IRDataset(selected_samples,win_size,seed)
         self.batchSize = batchSize
 
         self.dataloader = torch.utils.data.DataLoader(

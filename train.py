@@ -1,24 +1,6 @@
 import torch
-import torch.utils.data as data
-import torchnet as tnt
 import numpy as np
-from sklearn.model_selection import KFold
-from sklearn.metrics import confusion_matrix
 import random
-import os
-import json
-import pickle as pkl
-import argparse
-import pprint
-from models.Dataloader import CustomDatasetDataLoader,IR_Split
-from models.IPEC_model import IPECNet
-from loss.Loss import KL_loss
-import torch.nn as nn
-import torch.nn.functional as F
-from models.Meters import BinaryClsMeter
-from pathlib import Path
-
-OneHot=lambda label,C: torch.zeros(label.shape[0],C).scatter_(1,label.view(-1,1),1)
 
 def SetSeed(seed):
     """function used to set a random seed
@@ -28,8 +10,31 @@ def SetSeed(seed):
     SEED = seed
     torch.manual_seed(SEED)
     torch.cuda.manual_seed(SEED)
+    torch.cuda.manual_seed_all(SEED)
     random.seed(SEED)
     np.random.seed(SEED)
+
+SetSeed(2020)
+
+
+import torch.utils.data as data
+import torchnet as tnt
+from sklearn.model_selection import KFold
+from sklearn.metrics import confusion_matrix
+import os
+import json
+import pickle as pkl
+import argparse
+import pprint
+from loss.Loss import KL_loss
+import torch.nn as nn
+import torch.nn.functional as F
+from pathlib import Path
+from models.Dataloader import CustomDatasetDataLoader,IR_Split
+from models.IPEC_model import IPECNet
+from models.Meters import BinaryClsMeter
+
+OneHot=lambda label,C: torch.zeros(label.shape[0],C).scatter_(1,label.view(-1,1),1)
 
 def train_epoch(model, optimizer, criterion, data_loader, device, config):
     acc_meter = BinaryClsMeter()
@@ -111,12 +116,12 @@ def save_results(epoch, metrics, config):
 
 def main(config):
     device = torch.device(config['device'])
-    
-    IRS=IR_Split(task='identification',shuffle=True,win_size=14)
+
+    IRS=IR_Split(task='identification',seed=config['rdm_seed'],shuffle=True,win_size=14)
     samples, train_sample_idx, test_sample_idx, val_sample_idx = IRS.split_dataset()
-    train_loader= CustomDatasetDataLoader(batchSize=config['batch_size'],selected_samples=samples[train_sample_idx],win_size=14)
-    test_loader = CustomDatasetDataLoader(batchSize=config['batch_size'],selected_samples=samples[test_sample_idx], win_size=14)
-    val_loader  = CustomDatasetDataLoader(batchSize=config['batch_size'],selected_samples=samples[val_sample_idx],  win_size=14)
+    train_loader= CustomDatasetDataLoader(batchSize=config['batch_size'],selected_samples=samples[train_sample_idx],win_size=14,nThreads=1,seed=config['rdm_seed'])
+    test_loader = CustomDatasetDataLoader(batchSize=config['batch_size'],selected_samples=samples[test_sample_idx], win_size=14,nThreads=1,seed=config['rdm_seed'])
+    val_loader  = CustomDatasetDataLoader(batchSize=config['batch_size'],selected_samples=samples[val_sample_idx],  win_size=14,nThreads=1,seed=config['rdm_seed'])
 
     model=IPECNet(nc=[1,16,16,32,32],padding_type='zero',norm_layer=nn.BatchNorm2d,task='identification')
     model = torch.nn.DataParallel(model.to(device), device_ids=[0,1,2,3])
@@ -169,7 +174,7 @@ if __name__ == '__main__':
 
 
     # Training parameters
-    parser.add_argument('--epochs', default=1, type=int, help='Number of epochs per fold')
+    parser.add_argument('--epochs', default=30, type=int, help='Number of epochs per fold')
     parser.add_argument('--batch_size', default=1024, type=int, help='Batch size')
     parser.add_argument('--lr', default=0.001, type=float, help='Learning rate')
     
@@ -177,6 +182,5 @@ if __name__ == '__main__':
     config = args.__dict__
     res=Path(config['res_dir'])
     res.mkdir(parents=True, exist_ok=True )
-    SetSeed(config['rdm_seed'])
     pprint.pprint(config)
     main(config)

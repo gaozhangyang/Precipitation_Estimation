@@ -122,3 +122,4 @@ venv.bak/
 .mypy_cache/
 log*/
 pic*/
+results
