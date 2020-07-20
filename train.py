@@ -34,6 +34,7 @@ from models.Dataloader import CustomDatasetDataLoader,IR_Split
 from models.IPEC_model import IPECNet
 from models.Meters import BinaryClsMeter
 import json
+import tqdm
 
 OneHot=lambda label,C: torch.zeros(label.shape[0],C).scatter_(1,label.view(-1,1),1)
 
@@ -180,23 +181,22 @@ def main(config):
     criterion = nn.CrossEntropyLoss()
 
     trainlog = {}
-    for epoch in range(1, config['epochs'] + 1):
+    for epoch in tqdm.tqdm(range(1, config['epochs'] + 1)):
         print('EPOCH {}/{}'.format(epoch, config['epochs']))
-
+        print('Train . . . ')
         model.train()
         train_metrics = train_epoch(model, optimizer, criterion, train_loader, device=device, config=config)
+        print(train_metrics)
 
         print('Validation . . . ')
         model.eval()
         val_metrics = evaluation(model, criterion, val_loader, device=device, config=config, mode='val')
-
         print(val_metrics)
 
         trainlog[epoch] = {**train_metrics, **val_metrics}
         
 
         if True:
-            print(val_metrics)
             torch.save({'epoch': epoch, 'state_dict': model.state_dict(),
                         'optimizer': optimizer.state_dict()},
                         os.path.join(config['res_dir'], 'Epoch_{}.pth.tar'.format(epoch + 1)),
