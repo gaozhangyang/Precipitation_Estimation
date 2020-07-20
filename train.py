@@ -36,6 +36,11 @@ from models.Meters import BinaryClsMeter
 
 OneHot=lambda label,C: torch.zeros(label.shape[0],C).scatter_(1,label.view(-1,1),1)
 
+root_path='/usr/commondata/weather/IR_data/IR_dataset_QingHua/'
+GOSE=np.load(root_path+'X_train_hourly.npz')['arr_0']
+StageIV=np.load(root_path+'Y_train_hourly.npz')['arr_0']
+
+
 def train_epoch(model, optimizer, criterion, data_loader, device, config):
     acc_meter = BinaryClsMeter()
     loss_meter = tnt.meter.AverageValueMeter()
@@ -117,11 +122,39 @@ def save_results(epoch, metrics, config):
 def main(config):
     device = torch.device(config['device'])
 
-    IRS=IR_Split(task='identification',seed=config['rdm_seed'],shuffle=True,win_size=14)
+    IRS=IR_Split(   X=GOSE, 
+                    Y=StageIV,
+                    task='identification',
+                    seed=config['rdm_seed'],
+                    shuffle=True,
+                    win_size=14
+                    )
     samples, train_sample_idx, test_sample_idx, val_sample_idx = IRS.split_dataset()
-    train_loader= CustomDatasetDataLoader(batchSize=config['batch_size'],selected_samples=samples[train_sample_idx],win_size=14,nThreads=1,seed=config['rdm_seed'])
-    test_loader = CustomDatasetDataLoader(batchSize=config['batch_size'],selected_samples=samples[test_sample_idx], win_size=14,nThreads=1,seed=config['rdm_seed'])
-    val_loader  = CustomDatasetDataLoader(batchSize=config['batch_size'],selected_samples=samples[val_sample_idx],  win_size=14,nThreads=1,seed=config['rdm_seed'])
+
+    train_loader= CustomDatasetDataLoader(  X=GOSE, 
+                                            Y=StageIV,
+                                            batchSize=config['batch_size'],
+                                            selected_samples=samples[train_sample_idx],
+                                            win_size=14,
+                                            nThreads=1,
+                                            seed=config['rdm_seed']
+                                            )
+    test_loader = CustomDatasetDataLoader(  X=GOSE, 
+                                            Y=StageIV,
+                                            batchSize=config['batch_size'],
+                                            selected_samples=samples[test_sample_idx], 
+                                            win_size=14,
+                                            nThreads=1,
+                                            seed=config['rdm_seed']
+                                            )
+    val_loader  = CustomDatasetDataLoader(  X=GOSE, 
+                                            Y=StageIV,
+                                            batchSize=config['batch_size'],
+                                            selected_samples=samples[val_sample_idx],  
+                                            win_size=14,
+                                            nThreads=1,
+                                            seed=config['rdm_seed']
+                                            )
 
     model=IPECNet(nc=[1,16,16,32,32],padding_type='zero',norm_layer=nn.BatchNorm2d,task='identification')
     model = torch.nn.DataParallel(model.to(device), device_ids=[0,1,2,3])

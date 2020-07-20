@@ -23,17 +23,11 @@ from datetime import date
 from datetime import timedelta
 import os
 
-root_path='/usr/commondata/weather/IR_data/IR_dataset_QingHua/'
-GOSE=np.load(root_path+'X_train_hourly.npz')['arr_0']
-StageIV=np.load(root_path+'Y_train_hourly.npz')['arr_0']
-
-
-
 
 class IR_Split:
-    def __init__(self,task='identification',shuffle=False,seed=2020,win_size=14):
-        self.X=GOSE
-        self.Y=StageIV
+    def __init__(self,X,Y,task='identification',shuffle=False,seed=2020,win_size=14):
+        self.X=X
+        self.Y=Y
         self.win_size=win_size
         self.task=task
         self.shuffle=shuffle
@@ -43,12 +37,13 @@ class IR_Split:
         R_samples=[]
         NR_samples=[]
         for T in range(StageIV.shape[0]):
-            for row in range(self.win_size,StageIV.shape[1]-self.win_size,self.win_size):
-                for col in range(self.win_size,StageIV.shape[2]-self.win_size,self.win_size):
+            for row in range(self.win_size,StageIV.shape[1]-self.win_size-1,self.win_size):
+                for col in range(self.win_size,StageIV.shape[2]-self.win_size-1,self.win_size):
                     if StageIV[T,row,col]>0.1:
                         R_samples.append((T,row,col))
                     else:
                         NR_samples.append((T,row,col))
+
                         
         R_samples=np.array(R_samples)
         NR_samples=np.array(NR_samples)
@@ -64,6 +59,7 @@ class IR_Split:
         if self.task=='estimation':
             self.samples=np.array(random.choices(self.R_samples,k=470000))
         
+        
         if self.shuffle:
             np.random.shuffle(self.samples)
         L=len(self.samples)
@@ -77,14 +73,14 @@ class IR_Split:
 
 
 class IRDataset(Dataset):
-    def __init__(self,samples,win_size=14,seed=2020):
-        self.X=GOSE
-        self.Y=StageIV
+    def __init__(self,samples,X,Y,win_size=14,seed=2020):
+        self.X=X
+        self.Y=Y
         self.win_size=win_size
         self.samples=samples
         self.L=len(self.samples)
 
-    
+    @classmethod
     def safe_crop_center(self,img,x,y,cropx,cropy):
         startx = x-(cropx)
         endx=x+(cropx)+1
@@ -103,7 +99,7 @@ class IRDataset(Dataset):
                 return None
             return img[startx:endx,starty:endy]
     
-
+    @classmethod
     def unsafe_crop_center(self,img,x,y,cropx,cropy):
         startx = x-(cropx)
         endx=x+(cropx)+1
@@ -132,8 +128,8 @@ class IRDataset(Dataset):
 
 
 class CustomDatasetDataLoader(object):
-    def __init__(self, batchSize,selected_samples,win_size, nThreads=8,seed=2020):
-        self.dataset = IRDataset(selected_samples,win_size,seed)
+    def __init__(self, X, Y, batchSize,selected_samples,win_size, nThreads=8,seed=2020):
+        self.dataset = IRDataset(selected_samples,X=X,Y=Y,win_size=win_size,seed=seed)
         self.batchSize = batchSize
 
         self.dataloader = torch.utils.data.DataLoader(
@@ -154,8 +150,8 @@ class CustomDatasetDataLoader(object):
         return 'CustomDatasetDataLoader'
 
 
-if __name__ =='__main__':
-    IRS=IR_Split(task='identification',shuffle=True,win_size=14)
-    samples, train_sample_idx, test_sample_idx, val_sample_idx = IRS.split_dataset()
-    dataloader=CustomDatasetDataLoader(1024,samples[train_sample_idx],win_size=14)
-    print()
+# if __name__ =='__main__':
+#     IRS=IR_Split(task='identification',shuffle=True,win_size=14)
+#     samples, train_sample_idx, test_sample_idx, val_sample_idx = IRS.split_dataset()
+#     dataloader=CustomDatasetDataLoader(1024,samples[train_sample_idx],win_size=14)
+#     print()
