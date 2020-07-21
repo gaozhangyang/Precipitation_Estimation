@@ -110,7 +110,7 @@ def evaluation(model, criterion, loader, device, config, mode='val'):
 def save_results(epoch, metrics, config):
     with open(os.path.join(config['res_dir'], 'epoch_{}'.format(epoch), 'test_metrics.json'), 'w') as outfile:
         json.dump(metrics, outfile, indent=4)
-        
+
 def main(config):
     device = torch.device(config['device'])
     train_samples=IR_Split(     X=GOSE_train, 
@@ -136,7 +136,8 @@ def main(config):
                             seed=config['rdm_seed'],
                             shuffle=True,
                             win_size=14,
-                            k_num=10000
+                            k_num=10000,
+                            evaluate=True
                         ).split_dataset()
     val_loader  = CustomDatasetDataLoader(  X=GOSE_val, 
                                             Y=StageIV_val,
