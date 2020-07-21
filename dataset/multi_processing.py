@@ -211,8 +211,8 @@ if __name__ =='__main__':
 
     parser = argparse.ArgumentParser() 
     parser.add_argument('--pnum',type=int,default=80,help='the number of sub-processes')
-    parser.add_argument('--read_root',type=str,default='/usr/commondata/weather/StageIV/StageIV/')
-    parser.add_argument('--save_root',type=str,default='/usr/commondata/weather/IR_data/output/')
+    parser.add_argument('--read_root',type=str,default='/usr/commondata/weather/IR/IR_2012_raw/')
+    parser.add_argument('--save_root',type=str,default='/usr/commondata/weather/IR/IR_2012_project_calibration/')
     parser.add_argument('--long_range',type=tuple,default=(-115,-80))
     parser.add_argument('--lat_range',type=tuple,default=(30,45))
     parser.add_argument('--mode',type=str,default='StageIV',choices=['IR_2012', 'StageIV'])
