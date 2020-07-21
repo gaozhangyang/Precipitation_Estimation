@@ -19,7 +19,6 @@ class BinaryClsMeter(object):
         self.y_true=[]
         self.y_pred=[]
 
-
     def add(self, pred,target):
         '''Log a new value to the meter
 
@@ -31,8 +30,6 @@ class BinaryClsMeter(object):
         self.pos+=torch.sum(pred==target).detach().cpu().numpy()
         self.y_true+=target.detach().cpu().numpy().tolist()
         self.y_pred+=pred.detach().cpu().numpy().tolist()
-
-
 
     def value(self):
         '''Get the value of the meter in the current state.'''

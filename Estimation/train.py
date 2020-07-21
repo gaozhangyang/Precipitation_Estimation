@@ -56,7 +56,7 @@ def train_epoch(model, optimizer, scheduler, criterion, data_loader, device, con
 
     for idx, (x,y,i,j,key) in enumerate(data_loader):
         x = x.to(device).float()
-        y = (y>0.1).to(device).long().view(-1)
+        y = y.to(device).view(-1)
 
         optimizer.zero_grad()
         x[torch.isnan(x)]=0
@@ -68,7 +68,7 @@ def train_epoch(model, optimizer, scheduler, criterion, data_loader, device, con
         optimizer.step()
         scheduler.step()
 
-        acc_meter.add(torch.argmax(out,dim=1), y)
+        acc_meter.add(out, y)
         loss_meter.add(loss.item())
 
         
@@ -78,11 +78,9 @@ def train_epoch(model, optimizer, scheduler, criterion, data_loader, device, con
 
     indicate=acc_meter.value()
     epoch_metrics = {'train_loss': loss_meter.value()[0],
-                     'train_acc0': indicate[0],
-                     'train_acc1': indicate[1],
-                     'train_POD': indicate[2],
-                     'train_FAR': indicate[3],
-                     'train_CSI': indicate[4]
+                     'train_CC': indicate[0],
+                     'train_BIAS': indicate[1],
+                     'train_MSE': indicate[2],
                      }
 
     return epoch_metrics
@@ -98,23 +96,21 @@ def evaluation(model, criterion, loader, device, config, mode='val'):
     for idx, (x,y,T,row,col) in enumerate(loader):
         y_true.extend(list(map(int, y)))
         x = x.to(device).float()
-        y = (y>0.1).to(device).long().view(-1)
+        y = y.to(device).view(-1)
 
         with torch.no_grad():
             x[torch.isnan(x)]=0
             out = model(x)
             loss = criterion(out,y.long())
 
-        acc_meter.add(torch.argmax(out,dim=1), y)
+        acc_meter.add(out, y)
         loss_meter.add(loss.item())
 
     indicate=acc_meter.value()
     metrics = {'{}_loss'.format(mode): loss_meter.value()[0],
-               '{}_acc0'.format(mode): indicate[0],
-               '{}_acc1'.format(mode): indicate[1],
-               '{}_POD'.format(mode): indicate[2],
-               '{}_FAR'.format(mode): indicate[3],
-               '{}_CSI'.format(mode): indicate[4],
+               '{}_CC'.format(mode): indicate[0],
+               '{}_BIAS'.format(mode): indicate[1],
+               '{}_MSE'.format(mode): indicate[2],
                }
 
     if mode == 'val':
@@ -134,11 +130,11 @@ def main(config):
 
     train_samples=IR_Split(     X=GOSE_train, 
                                 Y=StageIV_train,
-                                task='identification',
+                                task='estimation',
                                 seed=config['rdm_seed'],
                                 shuffle=True,
                                 win_size=14,
-                                k_num=340000
+                                k_num=470000
                             ).split_dataset()
 
     train_loader= CustomDatasetDataLoader(  X=GOSE_train, 
@@ -153,7 +149,7 @@ def main(config):
 
     val_samples=IR_Split(   X=GOSE_val, 
                             Y=StageIV_val,
-                            task='identification',
+                            task='estimation',
                             seed=config['rdm_seed'],
                             shuffle=True,
                             win_size=14,
@@ -179,11 +175,11 @@ def main(config):
         samples2.append((T,row,col))
     
     
-    model=IPECNet(nc=[1,16,16,32,32],padding_type='zero',norm_layer=nn.BatchNorm2d,task='identification')
+    model=IPECNet(nc=[1,16,16,32,32],padding_type='zero',norm_layer=nn.BatchNorm2d,task='estimation')
     model = torch.nn.DataParallel(model.to(device), device_ids=[0,1,2,3])
     optimizer = torch.optim.SGD(model.parameters(),lr=config['lr'])
     scheduler = lr_scheduler.StepLR(optimizer, step_size=1000, gamma=0.1)
-    criterion = nn.CrossEntropyLoss()
+    criterion = KL_loss(config['w'])
 
     trainlog = {}
     for epoch in tqdm.tqdm(range(1, config['epochs'] + 1)):
@@ -238,6 +234,7 @@ if __name__ == '__main__':
     parser.add_argument('--epochs', default=30, type=int, help='Number of epochs per fold')
     parser.add_argument('--batch_size', default=1024, type=int, help='Batch size')
     parser.add_argument('--lr', default=0.001, type=float, help='Learning rate')
+    parser.add_argument('--w', default=1000, type=float)
     
     args = parser.parse_args()
     config = args.__dict__
