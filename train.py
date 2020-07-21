@@ -35,6 +35,7 @@ from models.IPEC_model import IPECNet
 from models.Meters import BinaryClsMeter
 import json
 import tqdm
+from torch.optim import lr_scheduler
 
 OneHot=lambda label,C: torch.zeros(label.shape[0],C).scatter_(1,label.view(-1,1),1)
 
@@ -47,7 +48,7 @@ GOSE_val=np.load(train_path+'X_val_hourly.npz')['arr_0']
 StageIV_val=np.load(train_path+'Y_val_hourly.npz')['arr_0']
 
 
-def train_epoch(model, optimizer, criterion, data_loader, device, config):
+def train_epoch(model, optimizer, scheduler, criterion, data_loader, device, config):
     acc_meter = BinaryClsMeter()
     loss_meter = tnt.meter.AverageValueMeter()
     y_true = []
@@ -65,9 +66,12 @@ def train_epoch(model, optimizer, criterion, data_loader, device, config):
         loss = criterion(out,y)
         loss.backward()
         optimizer.step()
+        scheduler.step()
 
         acc_meter.add(torch.argmax(out,dim=1), y)
         loss_meter.add(loss.item())
+
+        
 
         if (idx + 1) % config['display_step'] == 0:
             print('Step [{}/{}], Loss: {:.4f}'.format(idx + 1, len(data_loader), loss_meter.value()[0]))
@@ -177,7 +181,8 @@ def main(config):
     
     model=IPECNet(nc=[1,16,16,32,32],padding_type='zero',norm_layer=nn.BatchNorm2d,task='identification')
     model = torch.nn.DataParallel(model.to(device), device_ids=[0,1,2,3])
-    optimizer = torch.optim.Adam(model.parameters(),lr=config['lr'])
+    optimizer = torch.optim.SGD(model.parameters(),lr=config['lr'])
+    scheduler = lr_scheduler.StepLR(optimizer, step_size=1000, gamma=0.1)
     criterion = nn.CrossEntropyLoss()
 
     trainlog = {}
@@ -185,7 +190,7 @@ def main(config):
         print('EPOCH {}/{}'.format(epoch, config['epochs']))
         print('Train . . . ')
         model.train()
-        train_metrics = train_epoch(model, optimizer, criterion, train_loader, device=device, config=config)
+        train_metrics = train_epoch(model, optimizer, scheduler, criterion, train_loader, device=device, config=config)
         print(train_metrics)
 
         print('Validation . . . ')
@@ -226,11 +231,11 @@ if __name__ == '__main__':
     parser.add_argument('--rdm_seed', default=1, type=int, help='Random seed')
     parser.add_argument('--display_step', default=10, type=int,
                         help='Interval in batches between display of training metrics')
-    parser.add_argument('--res_dir', default='./results', type=str)
+    parser.add_argument('--res_dir', default='./results/like_qinghua', type=str)
 
 
     # Training parameters
-    parser.add_argument('--epochs', default=100, type=int, help='Number of epochs per fold')
+    parser.add_argument('--epochs', default=30, type=int, help='Number of epochs per fold')
     parser.add_argument('--batch_size', default=1024, type=int, help='Batch size')
     parser.add_argument('--lr', default=0.001, type=float, help='Learning rate')
     
