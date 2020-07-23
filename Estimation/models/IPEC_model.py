@@ -38,7 +38,7 @@ class IPECNet(nn.Module):
             y=self.fc2(feature.view(N,-1))
         
         if self.task=='estimation':
-            y= F.sigmoid(self.fc1(feature.view(N,-1)))
+            y= self.fc1(feature.view(N,-1))
 
         return y
 

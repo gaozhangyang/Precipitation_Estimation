@@ -28,8 +28,8 @@ class BinaryClsMeter(object):
 
         '''
         self.N+=pred.shape[0]
-        self.y_true+=target.detach().cpu().numpy().tolist()
-        self.y_pred+=pred.detach().cpu().numpy().tolist()
+        self.y_true+=target.view(-1).detach().cpu().numpy().tolist()
+        self.y_pred+=pred.view(-1).detach().cpu().numpy().tolist()
 
 
 

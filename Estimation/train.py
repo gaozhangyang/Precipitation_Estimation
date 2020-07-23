@@ -26,7 +26,7 @@ import json
 import pickle as pkl
 import argparse
 import pprint
-from loss.Loss import KL_loss
+from loss.Loss import Estimation_Loss
 import torch.nn as nn
 import torch.nn.functional as F
 from pathlib import Path
@@ -56,7 +56,7 @@ def train_epoch(model, optimizer, scheduler, criterion, data_loader, device, con
 
     for idx, (x,y,i,j,key) in enumerate(data_loader):
         x = x.to(device).float()
-        y = y.to(device).view(-1)
+        y = y.to(device).float().view(-1)
 
         optimizer.zero_grad()
         x[torch.isnan(x)]=0
@@ -64,6 +64,9 @@ def train_epoch(model, optimizer, scheduler, criterion, data_loader, device, con
 
         # loss = criterion( out.view(-1),(y>0.1).float().view(-1) )
         loss = criterion(out,y)
+        # print(loss)
+        # if torch.isnan(loss):
+        #     print()
         loss.backward()
         optimizer.step()
         scheduler.step()
@@ -71,7 +74,6 @@ def train_epoch(model, optimizer, scheduler, criterion, data_loader, device, con
         acc_meter.add(out, y)
         loss_meter.add(loss.item())
 
-        
 
         if (idx + 1) % config['display_step'] == 0:
             print('Step [{}/{}], Loss: {:.4f}'.format(idx + 1, len(data_loader), loss_meter.value()[0]))
@@ -96,7 +98,7 @@ def evaluation(model, criterion, loader, device, config, mode='val'):
     for idx, (x,y,T,row,col) in enumerate(loader):
         y_true.extend(list(map(int, y)))
         x = x.to(device).float()
-        y = y.to(device).view(-1)
+        y = y.to(device).float().view(-1)
 
         with torch.no_grad():
             x[torch.isnan(x)]=0
@@ -145,7 +147,7 @@ def main(config):
                                             nThreads=1,
                                             seed=config['rdm_seed'],
                                             )
-    
+
 
     val_samples=IR_Split(   X=GOSE_val, 
                             Y=StageIV_val,
@@ -155,6 +157,7 @@ def main(config):
                             win_size=14,
                             k_num=10000
                         ).split_dataset()
+
 
     val_loader  = CustomDatasetDataLoader(  X=GOSE_val, 
                                             Y=StageIV_val,
@@ -179,7 +182,12 @@ def main(config):
     model = torch.nn.DataParallel(model.to(device), device_ids=[0,1,2,3])
     optimizer = torch.optim.SGD(model.parameters(),lr=config['lr'])
     scheduler = lr_scheduler.StepLR(optimizer, step_size=1000, gamma=0.1)
-    criterion = KL_loss(config['w'])
+    criterion = Estimation_Loss(w=config['w'],
+                                h=config['h'],
+                                X_min=config['X_min'],
+                                X_max=config['X_max'],
+                                bins=config['bins']
+                                )
 
     trainlog = {}
     for epoch in tqdm.tqdm(range(1, config['epochs'] + 1)):
@@ -202,6 +210,11 @@ def main(config):
                         'optimizer': optimizer.state_dict()},
                         os.path.join(config['res_dir'], 'Epoch_{}.pth.tar'.format(epoch + 1)),
                         )
+        
+        filename=os.path.join(config['res_dir'], 'loginfo.json')
+        with open(filename,'w') as file_obj:
+            json.dump(  {'train_metrics': trainlog,'val_metrics':val_metrics},
+                        file_obj)
 
     print('Testing best epoch . . .')
     model.load_state_dict(
@@ -234,10 +247,21 @@ if __name__ == '__main__':
     parser.add_argument('--epochs', default=30, type=int, help='Number of epochs per fold')
     parser.add_argument('--batch_size', default=1024, type=int, help='Batch size')
     parser.add_argument('--lr', default=0.001, type=float, help='Learning rate')
-    parser.add_argument('--w', default=1000, type=float)
+
+    # loss parameters
+    parser.add_argument('--w', default=0.9, type=float)
+    parser.add_argument('--h', default=2.5, type=float)
+    parser.add_argument('--X_min', default=-10, type=float)
+    parser.add_argument('--X_max', default=60, type=float)
+    parser.add_argument('--bins', default=70, type=int)
     
     args = parser.parse_args()
     config = args.__dict__
+
+    filename=os.path.join(config['res_dir'], 'model_param.json')
+    with open(filename,'w') as file_obj:
+        json.dump(  config,file_obj)
+
     res=Path(config['res_dir'])
     res.mkdir(parents=True, exist_ok=True )
     pprint.pprint(config)
