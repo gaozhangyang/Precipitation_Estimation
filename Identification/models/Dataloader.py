@@ -118,8 +118,9 @@ class IRDataset(Dataset):
     def __getitem__(self, idx):
         T,row,col=self.samples[idx]
         X_croped=self.unsafe_crop_center(self.X[T],row,col,self.win_size,self.win_size)
-        Y_croped=self.Y[T,row,col]
-        return X_croped,Y_croped,T,row,col
+        # Y_croped=self.Y[T,row,col]
+        Y_croped=self.unsafe_crop_center(self.Y[T],row,col,self.win_size,self.win_size)
+        return X_croped,Y_croped,T,row,col, self.X[T], self.Y[T]
 
 
     def __len__(self):

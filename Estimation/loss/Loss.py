@@ -48,14 +48,14 @@ class Estimation_Loss(nn.Module):
     def __init__(self,w,h,X_min,X_max,bins):
         super(Estimation_Loss, self).__init__()
         self.kl_loss=KL_loss(h,X_min,X_max,bins)
-        # self.ed_loss=Euclidean_distance()
-        self.ed_loss=nn.MSELoss()
+        self.ed_loss=Euclidean_distance()
+        # self.ed_loss=nn.MSELoss()
         self.w=w
     
     def forward(self,pred,y_true):
         kl_loss,x,P,Q=self.kl_loss(pred,y_true)
         ed_loss=self.ed_loss(pred,y_true)
-        loss=self.w*ed_loss#self.w*kl_loss+ed_loss
+        loss=self.w*kl_loss+ed_loss
         return loss
 
 if __name__ == '__main__':

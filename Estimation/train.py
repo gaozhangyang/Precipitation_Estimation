@@ -37,6 +37,8 @@ import json
 import tqdm
 from torch.optim import lr_scheduler
 
+os.environ["CUDA_VISIBLE_DEVICES"] = '4,5,6,7'
+
 OneHot=lambda label,C: torch.zeros(label.shape[0],C).scatter_(1,label.view(-1,1),1)
 
 train_path='/usr/commondata/weather/dataset_release/IR_dataset_QingHua/'

@@ -31,6 +31,9 @@ from models.Meters import BinaryClsMeter
 import json
 import tqdm
 from torch.optim import lr_scheduler
+import sys
+sys.path.append('/usr/commondata/weather/code/Precipitation_Estimation/Tools/')
+from torchtool import EarlyStopping
 
 OneHot=lambda label,C: torch.zeros(label.shape[0],C).scatter_(1,label.view(-1,1),1)
 
@@ -54,7 +57,7 @@ def train_epoch(model, optimizer, scheduler, criterion, data_loader, device, con
         optimizer.zero_grad()
         x[torch.isnan(x)]=0
         out = model(x)
-        # loss = criterion( out.view(-1),(y>0.1).float().view(-1) )
+
         loss = criterion(out,y)
         loss.backward()
         optimizer.step()
@@ -63,7 +66,11 @@ def train_epoch(model, optimizer, scheduler, criterion, data_loader, device, con
         acc_meter.add(torch.argmax(out,dim=1), y)
         loss_meter.add(loss.item())
 
+        early_stopping(loss.item(),model)
 
+        if early_stopping.early_stop:
+            print("Early stopping")
+            break
 
         if (idx + 1) % config['display_step'] == 0:
             print('Step [{}/{}], Loss: {:.4f}'.format(idx + 1, len(data_loader), loss_meter.value()[0]))
@@ -104,12 +111,9 @@ def evaluation(model, criterion, loader, device, config, mode='val'):
                }
     if mode == 'val':
         return metrics
+        
     elif mode == 'test':
         return metrics
-
-def save_results(epoch, metrics, config):
-    with open(os.path.join(config['res_dir'], 'epoch_{}'.format(epoch), 'test_metrics.json'), 'w') as outfile:
-        json.dump(metrics, outfile, indent=4)
 
 def main(config):
     device = torch.device(config['device'])
@@ -147,13 +151,6 @@ def main(config):
                                             nThreads=1,
                                             seed=config['rdm_seed']
                                             )
-    samples1=[]
-    for x,y,T,row,col in train_loader:
-        samples1.append((T,row,col))
-    
-    samples2=[]
-    for x,y,T,row,col in train_loader:
-        samples2.append((T,row,col))
     
 
     model=IPECNet(nc=[1,16,16,32,32],padding_type='zero',norm_layer=nn.BatchNorm2d,task='identification')
@@ -176,11 +173,12 @@ def main(config):
         print(val_metrics)
         trainlog[epoch] = {**train_metrics, **val_metrics}
         
-        if True:
-            torch.save({'epoch': epoch, 'state_dict': model.state_dict(),
-                        'optimizer': optimizer.state_dict()},
-                        os.path.join(config['res_dir'], 'Epoch_{}.pth.tar'.format(epoch + 1)),
-                        )
+        filename=os.path.join(config['res_dir'], 'train_val_info.json')
+        with open(filename,'w') as file_obj:
+            json.dump(  {'train_metrics': trainlog,'val_metrics':val_metrics}, file_obj)
+        
+        if early_stopping.early_stop:
+            break
 
     print('Testing best epoch . . .')
     model.load_state_dict(
@@ -188,10 +186,9 @@ def main(config):
     model.eval()
     test_metrics = evaluation(model, criterion, val_loader, device=device, mode='test', config=config)
     print(test_metrics)
-    filename=os.path.join(config['res_dir'], 'loginfo.json')
+    filename=os.path.join(config['res_dir'], 'test_info.json')
     with open(filename,'w') as file_obj:
-        json.dump(  {'train_metrics': trainlog,'test_metrics':test_metrics},
-                    file_obj)
+        json.dump(  {'test_metrics':test_metrics},file_obj)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -201,17 +198,28 @@ if __name__ == '__main__':
     parser.add_argument('--rdm_seed', default=1, type=int, help='Random seed')
     parser.add_argument('--display_step', default=10, type=int,
                         help='Interval in batches between display of training metrics')
-    parser.add_argument('--res_dir', default='./results/like_qinghua', type=str)
+    parser.add_argument('--res_dir', default='./Identification/results/like_qinghua', type=str)
 
 
     # Training parameters
     parser.add_argument('--epochs', default=50, type=int, help='Number of epochs per fold')
     parser.add_argument('--batch_size', default=1024, type=int, help='Batch size')
     parser.add_argument('--lr', default=0.001, type=float, help='Learning rate')
+    parser.add_argument('--patience', default=100, type=int)
+    parser.add_argument('--delta', default=0, type=float)
 
     args = parser.parse_args()
     config = args.__dict__
     res=Path(config['res_dir'])
     res.mkdir(parents=True, exist_ok=True )
     pprint.pprint(config)
+
+    filename=os.path.join(config['res_dir'], 'model_param.json')
+    with open(filename,'w') as file_obj:
+        json.dump(  config,file_obj)
+
+    early_stopping = EarlyStopping( patience=config['patience'],
+                                    delta=config['delta'], 
+                                    root=config['res_dir'],
+                                    verbose=True)
     main(config)
