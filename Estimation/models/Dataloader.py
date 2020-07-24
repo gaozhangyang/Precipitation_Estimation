@@ -63,7 +63,8 @@ class IR_Split:
         
         if self.task=='estimation':
             if self.evaluate:
-                self.samples=np.vstack([self.R_samples,self.NR_samples])
+                # self.samples=np.vstack([self.R_samples,self.NR_samples])
+                self.samples=self.R_samples
             else:
                 self.samples=np.array(random.choices(self.R_samples,k=self.k_num))
         
@@ -119,7 +120,8 @@ class IRDataset(Dataset):
         T,row,col=self.samples[idx]
         X_croped=self.unsafe_crop_center(self.X[T],row,col,self.win_size,self.win_size)
         Y_croped=self.Y[T,row,col]
-        return X_croped,Y_croped,T,row,col
+        # Y_croped=self.unsafe_crop_center(self.Y[T],row,col,self.win_size,self.win_size)
+        return X_croped,Y_croped,T,row,col, self.X[T], self.Y[T]
 
 
     def __len__(self):

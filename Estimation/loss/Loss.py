@@ -2,6 +2,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
 class gaussian_kde(nn.Module):
     def __init__(self,h):
         super(gaussian_kde, self).__init__()
@@ -54,7 +55,7 @@ class Estimation_Loss(nn.Module):
     def forward(self,pred,y_true):
         kl_loss,x,P,Q=self.kl_loss(pred,y_true)
         ed_loss=self.ed_loss(pred,y_true)
-        loss=self.w*kl_loss+(1-self.w)*ed_loss
+        loss=self.w*ed_loss#self.w*kl_loss+ed_loss
         return loss
 
 if __name__ == '__main__':

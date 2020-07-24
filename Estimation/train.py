@@ -51,22 +51,20 @@ StageIV_val=np.load(train_path+'Y_val_hourly.npz')['arr_0']
 def train_epoch(model, optimizer, scheduler, criterion, data_loader, device, config):
     acc_meter = BinaryClsMeter()
     loss_meter = tnt.meter.AverageValueMeter()
-    y_true = []
-    y_pred = []
 
-    for idx, (x,y,i,j,key) in enumerate(data_loader):
+    for idx, (x,y,T,row,col,X,Y) in enumerate(data_loader):
         x = x.to(device).float()
         y = y.to(device).float().view(-1)
 
         optimizer.zero_grad()
         x[torch.isnan(x)]=0
-        out = model(x)
+        out = model(x).view(-1)
 
-        # loss = criterion( out.view(-1),(y>0.1).float().view(-1) )
         loss = criterion(out,y)
         # print(loss)
-        # if torch.isnan(loss):
-        #     print()
+        if torch.isnan(loss):
+            print()
+
         loss.backward()
         optimizer.step()
         scheduler.step()
@@ -89,20 +87,16 @@ def train_epoch(model, optimizer, scheduler, criterion, data_loader, device, con
 
 
 def evaluation(model, criterion, loader, device, config, mode='val'):
-    y_true = []
-    y_pred = []
-
     acc_meter = BinaryClsMeter()
     loss_meter = tnt.meter.AverageValueMeter()
 
-    for idx, (x,y,T,row,col) in enumerate(loader):
-        y_true.extend(list(map(int, y)))
+    for idx, (x,y,T,row,col,X,Y) in enumerate(loader):
         x = x.to(device).float()
         y = y.to(device).float().view(-1)
 
         with torch.no_grad():
             x[torch.isnan(x)]=0
-            out = model(x)
+            out = model(x).view(-1)
             loss = criterion(out,y.long())
 
         acc_meter.add(out, y)
@@ -167,21 +161,12 @@ def main(config):
                                             nThreads=1,
                                             seed=config['rdm_seed']
                                             )
-
-    samples1=[]
-    for x,y,T,row,col in train_loader:
-        samples1.append((T,row,col))
-    
-
-    samples2=[]
-    for x,y,T,row,col in train_loader:
-        samples2.append((T,row,col))
     
     
     model=IPECNet(nc=[1,16,16,32,32],padding_type='zero',norm_layer=nn.BatchNorm2d,task='estimation')
     model = torch.nn.DataParallel(model.to(device), device_ids=[0,1,2,3])
     optimizer = torch.optim.SGD(model.parameters(),lr=config['lr'])
-    scheduler = lr_scheduler.StepLR(optimizer, step_size=1000, gamma=0.1)
+    scheduler = lr_scheduler.StepLR(optimizer, step_size=config['lr_stepsize'], gamma=0.1)
     criterion = Estimation_Loss(w=config['w'],
                                 h=config['h'],
                                 X_min=config['X_min'],
@@ -211,10 +196,9 @@ def main(config):
                         os.path.join(config['res_dir'], 'Epoch_{}.pth.tar'.format(epoch + 1)),
                         )
         
-        filename=os.path.join(config['res_dir'], 'loginfo.json')
+        filename=os.path.join(config['res_dir'], 'train_val_info.json')
         with open(filename,'w') as file_obj:
-            json.dump(  {'train_metrics': trainlog,'val_metrics':val_metrics},
-                        file_obj)
+            json.dump(  {'train_metrics': trainlog,'val_metrics':val_metrics}, file_obj)
 
     print('Testing best epoch . . .')
     model.load_state_dict(
@@ -225,10 +209,9 @@ def main(config):
 
     print(test_metrics)
 
-    filename=os.path.join(config['res_dir'], 'loginfo.json')
+    filename=os.path.join(config['res_dir'], 'test_info.json')
     with open(filename,'w') as file_obj:
-        json.dump(  {'train_metrics': trainlog,'test_metrics':test_metrics},
-                    file_obj)
+        json.dump(  {'test_metrics':test_metrics},file_obj)
 
 
 if __name__ == '__main__':
@@ -240,29 +223,31 @@ if __name__ == '__main__':
     parser.add_argument('--rdm_seed', default=1, type=int, help='Random seed')
     parser.add_argument('--display_step', default=10, type=int,
                         help='Interval in batches between display of training metrics')
-    parser.add_argument('--res_dir', default='./results/like_qinghua', type=str)
+    parser.add_argument('--res_dir', default='./Estimation/results/like_qinghua', type=str)
 
 
     # Training parameters
     parser.add_argument('--epochs', default=30, type=int, help='Number of epochs per fold')
     parser.add_argument('--batch_size', default=1024, type=int, help='Batch size')
-    parser.add_argument('--lr', default=0.001, type=float, help='Learning rate')
+    parser.add_argument('--lr', default=1e-4, type=float, help='Learning rate')
 
     # loss parameters
-    parser.add_argument('--w', default=0.9, type=float)
+    parser.add_argument('--w', default=1, type=float)
     parser.add_argument('--h', default=2.5, type=float)
     parser.add_argument('--X_min', default=-10, type=float)
     parser.add_argument('--X_max', default=60, type=float)
     parser.add_argument('--bins', default=70, type=int)
+    parser.add_argument('--lr_stepsize', default=1000, type=int)
     
     args = parser.parse_args()
     config = args.__dict__
+
+    res=Path(config['res_dir'])
+    res.mkdir(parents=True, exist_ok=True )
+    pprint.pprint(config)
 
     filename=os.path.join(config['res_dir'], 'model_param.json')
     with open(filename,'w') as file_obj:
         json.dump(  config,file_obj)
 
-    res=Path(config['res_dir'])
-    res.mkdir(parents=True, exist_ok=True )
-    pprint.pprint(config)
     main(config)
