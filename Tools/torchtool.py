@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import os
+import random
 
 class EarlyStopping:
     """Early stops the training if validation loss doesn't improve after a given patience."""
@@ -33,15 +34,18 @@ class EarlyStopping:
         if self.best_score is None:
             self.best_score = score
             self.save_checkpoint(val_loss, model)
+            return True #代表需要保存训练时的info
         elif score < self.best_score + self.delta:
             self.counter += 1
             print(f'EarlyStopping counter: {self.counter} out of {self.patience}')
             if self.counter >= self.patience:
                 self.early_stop = True
+            return False
         else:
             self.best_score = score
             self.save_checkpoint(val_loss, model)
             self.counter = 0
+            return True
 
     def save_checkpoint(self, val_loss, model):
         '''Saves model when validation loss decrease.'''
@@ -49,3 +53,17 @@ class EarlyStopping:
             print(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
         torch.save(model.state_dict(), os.path.join(self.root,'step_{}.pt'.format(self.train_step)))
         self.val_loss_min = val_loss
+
+
+
+def SetSeed(seed):
+    """function used to set a random seed
+    Arguments:
+        seed {int} -- seed number, will set to torch, random and numpy
+    """
+    SEED = seed
+    torch.manual_seed(SEED)
+    torch.cuda.manual_seed(SEED)
+    torch.cuda.manual_seed_all(SEED)
+    random.seed(SEED)
+    np.random.seed(SEED)

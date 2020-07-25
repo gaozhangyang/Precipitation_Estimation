@@ -10,9 +10,13 @@ import imageio
 import time
 import matplotlib.pyplot as plt
 import sys
-sys.path.append('./')
+sys.path.append('/usr/data/gzy/Precipitation_Estimation/')
 import Identification.models.Dataloader as Dataloader
 import matplotlib.patches as patches
+import torch
+
+toCPU=lambda x: x.detach().cpu().numpy()
+toCUDA=lambda x: torch.tensor(x).cuda()
 
 processes=[]
 
@@ -80,7 +84,7 @@ class Plot_XY(GIFPloter):
         super(Plot_XY,self).__init__(root)
     
     def callback(self,task,pid,Process_state):
-        x,y,X,Y,row,col,idx=task
+        x,y,X,Y,T,row,col,idx=task
         ##大图
         fig= plt.figure(constrained_layout=True,figsize=(30, 25))
         gs = fig.add_gridspec(5,6)
@@ -137,15 +141,62 @@ class Plot_XY(GIFPloter):
 
         ax12=fig.add_subplot(gs[4, 5])
         ax12.imshow(y)
-        plt.title('{}'.format(y[14,14]))
+
+        ax9.set_title('{}-{}-{}'.format(T,row,col))
+        ax12.set_title('{}'.format(y[14,14]))
         
         path=Path(self.root)
         path.mkdir(exist_ok=True,parents=True)
-        plt.savefig(path/('small{}.png'.format(idx)))
+        plt.savefig(path/('{}.png'.format(idx)))
         plt.close()
 
+        Process_state[str(pid)]=True
+
+
+class Plot_pred_surface(GIFPloter):
+    def __init__(self,root):
+        super(Plot_pred_surface,self).__init__(root)
+    
+    def callback(self,task,pid,Process_state):
+        x, pred, y_true, T, H, W=task
+        N=int(pred.shape[0]**0.5)
+        pred=pred.reshape(H,W)
+        y_true=y_true.reshape(H,W)
+
+
+        fig= plt.figure(constrained_layout=True,figsize=(20, 14))
+        gs = fig.add_gridspec(14,20)
+
+        ax1=fig.add_subplot(gs[0:4, 0:4])
+        ax1.imshow(x[0])
+
+        ax2=fig.add_subplot(gs[0:4, 4:8])
+        ax2.imshow(x[1])
+
+        ax3=fig.add_subplot(gs[0:4, 8:12])
+        ax3.imshow(x[2])
+
+        ax4=fig.add_subplot(gs[0:4, 12:16])
+        ax4.imshow(x[0]-x[1])
+
+        ax5=fig.add_subplot(gs[0:4, 16:20])
+        ax5.imshow(x[1]-x[2])
+
+        ax6=fig.add_subplot(gs[4:14, 0:10])
+        ax6.imshow(y_true)
+
+        ax7=fig.add_subplot(gs[4:14, 10:20])
+        ax7.imshow(pred)
+        ax7.set_title('{}'.format(T))
+
+        path=Path(self.root)
+        path.mkdir(exist_ok=True,parents=True)
+        plt.savefig(path/('{}.png'.format(T)))
+        plt.close()
 
         Process_state[str(pid)]=True
+
+
 
 
 class Draw:
@@ -154,8 +205,8 @@ class Draw:
 
     def generate_XY_MP4(self):
         train_path='/usr/commondata/weather/dataset_release/IR_dataset_QingHua/'
-        GOSE_train=np.load(train_path+'X_train_hourly.npz')['arr_0']
-        StageIV_train=np.load(train_path+'Y_train_hourly.npz')['arr_0']
+        GOSE_train=np.load(train_path+'X_val_hourly.npz')['arr_0']
+        StageIV_train=np.load(train_path+'Y_val_hourly.npz')['arr_0']
 
         train_samples=Dataloader.IR_Split(     
                                     X=GOSE_train, 
@@ -182,21 +233,98 @@ class Draw:
         for xs,ys,Ts,rows,cols,Xs,Ys in train_loader:
             for N in range(xs.shape[0]):
                 if (ys[N]>10).any():
-                    tasks.append((xs[idx],ys[idx],Xs[idx],Ys[idx],rows[idx],cols[idx],idx))
+                    tasks.append((xs[idx],ys[idx],Xs[idx],Ys[idx],Ts[idx],rows[idx],cols[idx],idx))
                     idx+=1
                     print(idx)
                 
-                if idx==100:
+                if idx==200:
                     break
                     
-            if idx==100:
+            if idx==200:
                 break
         
-        XY_MP4=Plot_XY('/usr/commondata/weather/code/Precipitation_Estimation/Visualization/center_above_10')
+        XY_MP4=Plot_XY('/usr/data/gzy/Precipitation_Estimation/Visualization/val_center_above_10')
         XY_MP4.run(30,tasks)
         XY_MP4.SaveGIF('XY',fps=0.5)
+    
+    def generate_pred_surface_MP4(self,model_path,step=14):
+        import os
+        import matplotlib.pyplot as plt
+        from Tools.torchtool import SetSeed
+
+        SetSeed(2020)
+
+        train_path='/usr/commondata/weather/dataset_release/IR_dataset_QingHua/'
+        GOSE=np.load(train_path+'X_train_hourly.npz')['arr_0']
+        StageIV=np.load(train_path+'Y_train_hourly.npz')['arr_0']
+
+        H,W=round((GOSE.shape[2]-29)/step), round((GOSE.shape[3]-29)/step)
+
+        tasks=[]
+        for i in range(0, GOSE.shape[0], int(GOSE.shape[0]/200)):
+            X=torch.tensor(GOSE[i]).float().cuda()
+            Y=StageIV[i]
+            pred,y_true=self.test_model(model_path,X=X,Y=Y,step=step)
+            tasks.append((toCPU(X),pred,y_true,i,H,W))
+        
+        pred_MP4=Plot_pred_surface('/usr/data/gzy/Precipitation_Estimation/Visualization/pred_train_surface')
+        pred_MP4.run(30,tasks)
+        pred_MP4.SaveGIF('pred_train',fps=0.5)
+
+
+    def test_model(self,model_path,X,Y,multi_gpu=True,batch_size=1024,step=14):
+        from Identification.models.IPEC_model import IPECNet
+        import torch.nn as nn
+        from collections import OrderedDict
+
+        ########################load model######################
+        model=IPECNet(nc=[1,16,16,32,32],padding_type='zero',norm_layer=nn.BatchNorm2d,task='identification')
+        model = torch.nn.DataParallel(model.to('cuda'), device_ids=[0,1])
+        state_dict = torch.load(model_path)
+        if multi_gpu:
+            model.load_state_dict(state_dict)
+        else:
+            # create new OrderedDict that does not contain `module.`
+            new_state_dict = OrderedDict()
+            for k, v in state_dict.items():
+                name = k[7:] # remove `module.`
+                new_state_dict[name] = v
+
+            model.load_state_dict(new_state_dict)
+            
+        model=model.cuda()
+        
+        
+        #######################generate samples################
+        L=len(range(14,375-15,step))**2
+        test_data=torch.zeros(L,3,29,29)
+        y_true=np.zeros(L)
+
+        N=0
+        for i in range(14,375-15,step):
+            for j in range(14,375-15,step):
+                tmpX=Dataloader.IRDataset.unsafe_crop_center(X,i,j,14,14)
+                test_data[N,:,:,:]=tmpX
+                y_true[N]=(Y[i,j]>0.1)
+                N+=1
+        
+        #######################get pred###################
+        with torch.no_grad():
+            pred=[]
+            for i in range(0,L//batch_size+1):
+                scope=range(i*batch_size,min((i+1)*batch_size,L))
+                tmpX=test_data[scope].float().cuda()
+                tmp_pred=np.argmax(model(tmpX).detach().cpu().numpy(),axis=1)
+                pred.append(tmp_pred)
+
+        pred=np.hstack(pred)
+        
+        return pred,y_true
+
 
 
 if __name__ == '__main__':
     draw=Draw()
-    draw.generate_XY_MP4()
+    # draw.generate_XY_MP4()
+    draw.generate_pred_surface_MP4( model_path='/usr/data/gzy/Precipitation_Estimation/Identification/results/like_qinghua_earlystop2/step_243.pt',
+                                    step=14)

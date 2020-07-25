@@ -25,13 +25,14 @@ import os
 
 
 class IR_Split:
-    def __init__(self,X,Y,task='identification',shuffle=False,seed=2020,win_size=14,k_num=340000,evaluate=False):
+    def __init__(self,X,Y,task='identification',shuffle=False,seed=2020,win_size=14,R_num=10000,NR_num=10000,evaluate=False):
         self.X=X
         self.Y=Y
         self.win_size=win_size
         self.task=task
         self.shuffle=shuffle
-        self.k_num=k_num
+        self.R_num=R_num
+        self.NR_num=NR_num
         self.evaluate=evaluate
         
     
@@ -58,14 +59,14 @@ class IR_Split:
             if self.evaluate:
                 self.samples=np.vstack([self.R_samples,self.NR_samples])
             else:
-                self.samples=np.vstack([np.array(random.choices(self.R_samples,k=self.k_num)),
-                                        np.array(random.choices(self.NR_samples,k=self.k_num))])
+                self.samples=np.vstack([np.array(random.choices(self.R_samples,k=self.R_num)),
+                                        np.array(random.choices(self.NR_samples,k=self.NR_num))])
         
         if self.task=='estimation':
             if self.evaluate:
                 self.samples=np.vstack([self.R_samples,self.NR_samples])
             else:
-                self.samples=np.array(random.choices(self.R_samples,k=self.k_num))
+                self.samples=np.array(random.choices(self.R_samples,k=self.R_num))
         
         
         if self.shuffle:
