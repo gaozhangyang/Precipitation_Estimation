@@ -10,7 +10,7 @@ import imageio
 import time
 import matplotlib.pyplot as plt
 import sys
-sys.path.append('/usr/data/gzy/climate/Precipitation_Estimation/')
+sys.path.append('/usr/data/gzy/Precipitation_Estimation/')
 import Identification.models.Dataloader as Dataloader
 import matplotlib.patches as patches
 import torch

@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-import random
+import random 
 def SetSeed(seed):
     """function used to set a random seed
     Arguments:
@@ -32,12 +32,12 @@ import json
 import tqdm
 from torch.optim import lr_scheduler
 import sys
-sys.path.append('/usr/data/gzy/climate/Precipitation_Estimation/Tools/')
-from torchtool import EarlyStopping
+sys.path.append('/usr/data/gzy/Precipitation_Estimation/')
+from Tools.torchtool import EarlyStopping
 
 OneHot=lambda label,C: torch.zeros(label.shape[0],C).scatter_(1,label.view(-1,1),1)
 
-train_path='/usr/commondata/weather/'
+train_path='/usr/commondata/weather/dataset_release/IR_dataset_QingHua/'
 GOSE_train=np.load(train_path+'X_train_hourly.npz')['arr_0']
 StageIV_train=np.load(train_path+'Y_train_hourly.npz')['arr_0']
 
@@ -228,8 +228,8 @@ if __name__ == '__main__':
 
     # dataset parameters
     parser.add_argument('--task', default='identification', type=str)
-    parser.add_argument('--train_R', default=10000, type=int)
-    parser.add_argument('--train_NR', default=10000, type=int)
+    parser.add_argument('--train_R', default=50000, type=int)
+    parser.add_argument('--train_NR', default=50000, type=int)
 
     parser.add_argument('--val_R', default=10000, type=int)
     parser.add_argument('--val_NR', default=10000, type=int)
@@ -240,7 +240,7 @@ if __name__ == '__main__':
 
     # Training parameters
     parser.add_argument('--epochs', default=100, type=int, help='Number of epochs per fold')
-    parser.add_argument('--batch_size', default=1024, type=int, help='Batch size')
+    parser.add_argument('--batch_size', default=600, type=int, help='Batch size')
     parser.add_argument('--lr', default=0.001, type=float, help='Learning rate')
     parser.add_argument('--patience', default=8, type=int)
     parser.add_argument('--delta', default=0, type=float)
