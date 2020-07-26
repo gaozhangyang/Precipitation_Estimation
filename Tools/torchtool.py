@@ -27,13 +27,13 @@ class EarlyStopping:
         self.root = root
         self.train_step=0
 
-    def __call__(self, val_loss, model):
+    def __call__(self, val_loss, model,epoch):
         self.train_step+=1
         score = -val_loss
 
         if self.best_score is None:
             self.best_score = score
-            self.save_checkpoint(val_loss, model)
+            self.save_checkpoint(val_loss, model,epoch)
             return True #代表需要保存训练时的info
         elif score < self.best_score + self.delta:
             self.counter += 1
@@ -43,15 +43,15 @@ class EarlyStopping:
             return False
         else:
             self.best_score = score
-            self.save_checkpoint(val_loss, model)
+            self.save_checkpoint(val_loss, model,epoch)
             self.counter = 0
             return True
 
-    def save_checkpoint(self, val_loss, model):
+    def save_checkpoint(self, val_loss, model,epoch):
         '''Saves model when validation loss decrease.'''
         if self.verbose:
             print(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
-        torch.save(model.state_dict(), os.path.join(self.root,'step_{}.pt'.format(self.train_step)))
+        torch.save(model.state_dict(), os.path.join(self.root,'epoch_{}_step_{}.pt'.format(epoch,self.train_step)))
         self.val_loss_min = val_loss
 
 

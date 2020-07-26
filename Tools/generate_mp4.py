@@ -10,7 +10,7 @@ import imageio
 import time
 import matplotlib.pyplot as plt
 import sys
-sys.path.append('/usr/data/gzy/Precipitation_Estimation/')
+sys.path.append('/usr/data/gzy/climate/Precipitation_Estimation/')
 import Identification.models.Dataloader as Dataloader
 import matplotlib.patches as patches
 import torch
@@ -253,23 +253,25 @@ class Draw:
         from Tools.torchtool import SetSeed
 
         SetSeed(2020)
-
-        train_path='/usr/commondata/weather/dataset_release/IR_dataset_QingHua/'
-        GOSE=np.load(train_path+'X_train_hourly.npz')['arr_0']
-        StageIV=np.load(train_path+'Y_train_hourly.npz')['arr_0']
+        
+        # TODO load data
+        train_path='/usr/commondata/weather/'
+        GOSE=np.load(train_path+'X_val_hourly.npz')['arr_0']
+        StageIV=np.load(train_path+'Y_val_hourly.npz')['arr_0']
 
         H,W=round((GOSE.shape[2]-29)/step), round((GOSE.shape[3]-29)/step)
 
         tasks=[]
-        for i in range(0, GOSE.shape[0], int(GOSE.shape[0]/200)):
+        for i in range(0, GOSE.shape[0], int(GOSE.shape[0]/150)):
             X=torch.tensor(GOSE[i]).float().cuda()
             Y=StageIV[i]
             pred,y_true=self.test_model(model_path,X=X,Y=Y,step=step)
             tasks.append((toCPU(X),pred,y_true,i,H,W))
         
-        pred_MP4=Plot_pred_surface('/usr/data/gzy/Precipitation_Estimation/Visualization/pred_train_surface')
+        # TODO save result
+        pred_MP4=Plot_pred_surface('/usr/data/gzy/climate/Precipitation_Estimation/Visualization/pred_val_surface_ex3')
         pred_MP4.run(30,tasks)
-        pred_MP4.SaveGIF('pred_train',fps=0.5)
+        pred_MP4.SaveGIF('pred_val',fps=0.5)
 
 
     def test_model(self,model_path,X,Y,multi_gpu=True,batch_size=1024,step=14):
@@ -279,7 +281,7 @@ class Draw:
 
         ########################load model######################
         model=IPECNet(nc=[1,16,16,32,32],padding_type='zero',norm_layer=nn.BatchNorm2d,task='identification')
-        model = torch.nn.DataParallel(model.to('cuda'), device_ids=[0,1])
+        model = torch.nn.DataParallel(model.to('cuda'), device_ids=[0])
         state_dict = torch.load(model_path)
         if multi_gpu:
             model.load_state_dict(state_dict)
@@ -326,5 +328,5 @@ class Draw:
 if __name__ == '__main__':
     draw=Draw()
     # draw.generate_XY_MP4()
-    draw.generate_pred_surface_MP4( model_path='/usr/data/gzy/Precipitation_Estimation/Identification/results/like_qinghua_earlystop2/step_243.pt',
+    draw.generate_pred_surface_MP4( model_path='/usr/data/gzy/climate/Precipitation_Estimation/Identification/ex2/results/003/epoch_5_step_5.pt',
                                     step=14)

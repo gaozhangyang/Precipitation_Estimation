@@ -32,20 +32,20 @@ import json
 import tqdm
 from torch.optim import lr_scheduler
 import sys
-sys.path.append('/usr/data/gzy/Precipitation_Estimation/Tools/')
+sys.path.append('/usr/data/gzy/climate/Precipitation_Estimation/Tools/')
 from torchtool import EarlyStopping
 
 OneHot=lambda label,C: torch.zeros(label.shape[0],C).scatter_(1,label.view(-1,1),1)
 
-train_path='/usr/commondata/weather/dataset_release/IR_dataset_QingHua/'
+train_path='/usr/commondata/weather/'
 GOSE_train=np.load(train_path+'X_train_hourly.npz')['arr_0']
 StageIV_train=np.load(train_path+'Y_train_hourly.npz')['arr_0']
 
 GOSE_val=np.load(train_path+'X_val_hourly.npz')['arr_0']
 StageIV_val=np.load(train_path+'Y_val_hourly.npz')['arr_0']
 
-GOSE_test=np.load(train_path+'X_test_C_summer_hourly.npz')['arr_0']
-StageIV_test=np.load(train_path+'Y_test_C_summer_hourly.npz')['arr_0']
+# GOSE_test=np.load(train_path+'X_test_C_summer_hourly.npz')['arr_0']
+# StageIV_test=np.load(train_path+'Y_test_C_summer_hourly.npz')['arr_0']
 
 
 def save_info(filename,loginfo):
@@ -156,8 +156,8 @@ def main(config):
                                             )
 
 
-    test_samples=IR_Split(  X=GOSE_test, 
-                            Y=StageIV_test,
+    test_samples=IR_Split(  X=GOSE_val, 
+                            Y=StageIV_val,
                             task=config['task'],
                             seed=config['rdm_seed'],
                             shuffle=True,
@@ -166,8 +166,8 @@ def main(config):
                             NR_num=config['test_NR'],
                             # evaluate=True
                         ).split_dataset()
-    test_loader  = CustomDatasetDataLoader( X=GOSE_test, 
-                                            Y=StageIV_test,
+    test_loader  = CustomDatasetDataLoader( X=GOSE_val, 
+                                            Y=StageIV_val,
                                             batchSize=config['batch_size'],
                                             selected_samples=test_samples,  
                                             win_size=14,
@@ -177,7 +177,7 @@ def main(config):
     
 
     model=IPECNet(nc=[1,16,16,32,32],padding_type='zero',norm_layer=nn.BatchNorm2d,task='identification')
-    model = torch.nn.DataParallel(model.to(device), device_ids=[0,1])
+    model = torch.nn.DataParallel(model.to(device), device_ids=[0])
     optimizer = torch.optim.SGD(model.parameters(),lr=config['lr'])
     scheduler = lr_scheduler.StepLR(optimizer, step_size=1000, gamma=0.1)
     criterion = nn.CrossEntropyLoss()
@@ -200,13 +200,14 @@ def main(config):
         with open(filename,'w') as file_obj:
             json.dump(  {'train_metrics': trainlog,'val_metrics':val_metrics}, file_obj)
         
-        early_stopping(val_metrics['val_loss'],model)
+        early_stopping(val_metrics['val_loss'],model,epoch)
         if early_stopping.early_stop:
             break
 
     print('Testing best epoch . . .')
     model.load_state_dict(
-        torch.load(os.path.join(config['res_dir'], 'step_{}.pth.tar'.format(early_stopping.train_step + 1) ))['state_dict'])
+            torch.load( os.path.join(config['res_dir'],'epoch_{}_step_{}.pt'.format(epoch,early_stopping.train_step)) )
+        )
     model.eval()
     test_metrics = evaluation(model, criterion, test_loader, device=device, mode='test', config=config)
     print(test_metrics)
@@ -223,7 +224,7 @@ if __name__ == '__main__':
     parser.add_argument('--rdm_seed', default=1, type=int, help='Random seed')
     parser.add_argument('--display_step', default=10, type=int,
                         help='Interval in batches between display of training metrics')
-    parser.add_argument('--res_dir', default='./Identification/results/R10000_NR10000', type=str)
+    parser.add_argument('--res_dir', default='./Identification/results/test', type=str)
 
     # dataset parameters
     parser.add_argument('--task', default='identification', type=str)
@@ -238,10 +239,10 @@ if __name__ == '__main__':
 
 
     # Training parameters
-    parser.add_argument('--epochs', default=50, type=int, help='Number of epochs per fold')
+    parser.add_argument('--epochs', default=100, type=int, help='Number of epochs per fold')
     parser.add_argument('--batch_size', default=1024, type=int, help='Batch size')
     parser.add_argument('--lr', default=0.001, type=float, help='Learning rate')
-    parser.add_argument('--patience', default=15, type=int)
+    parser.add_argument('--patience', default=8, type=int)
     parser.add_argument('--delta', default=0, type=float)
 
     args = parser.parse_args()
