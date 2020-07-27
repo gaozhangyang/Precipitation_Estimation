@@ -332,11 +332,11 @@ if __name__ == '__main__':
     parser.add_argument('--train_R', default=2000, type=int)
     parser.add_argument('--train_NR', default=2000, type=int)
 
-    parser.add_argument('--val_R', default=1000, type=int)
-    parser.add_argument('--val_NR', default=1000, type=int)
+    parser.add_argument('--val_R', default=10000, type=int)
+    parser.add_argument('--val_NR', default=10000, type=int)
 
-    parser.add_argument('--test_R', default=1000, type=int)
-    parser.add_argument('--test_NR', default=1000, type=int)
+    parser.add_argument('--test_R', default=10000, type=int)
+    parser.add_argument('--test_NR', default=10000, type=int)
 
 
     # Training parameters

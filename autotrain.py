@@ -1,6 +1,6 @@
+import numpy as np
 import os
 from multiprocessing import Process,Manager
-import numpy as np
 import signal
 import time
 
