@@ -59,8 +59,11 @@ class IR_Split:
             if self.evaluate:
                 self.samples=np.vstack([self.R_samples,self.NR_samples])
             else:
-                self.samples=np.vstack([np.array(random.choices(self.R_samples,k=self.R_num)),
-                                        np.array(random.choices(self.NR_samples,k=self.NR_num))])
+                if self.NR_num>0:
+                    self.samples=np.vstack([np.array(random.choices(self.R_samples,k=self.R_num)),
+                                            np.array(random.choices(self.NR_samples,k=self.NR_num))])
+                else:
+                    self.samples=np.array(random.choices(self.R_samples,k=self.R_num))
         
         if self.task=='estimation':
             if self.evaluate:

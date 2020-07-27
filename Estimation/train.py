@@ -32,13 +32,16 @@ import json
 import tqdm
 from torch.optim import lr_scheduler
 import sys
-sys.path.append('/usr/data/gzy/Precipitation_Estimation/')
+sys.path.append('/usr/data/gzy/climate/Precipitation_Estimation/')
 from Tools.torchtool import EarlyStopping
 from Estimation.models.Loss import Estimation_Loss
 
 OneHot=lambda label,C: torch.zeros(label.shape[0],C).scatter_(1,label.view(-1,1),1)
 
 train_path='/usr/commondata/weather/dataset_release/IR_dataset_QingHua/'
+# GOSE_test=GOSE_val=GOSE_train=np.load(train_path+'X_train_hourly_toy.npz')['arr_0']
+# StageIV_test=StageIV_val=StageIV_train=np.load(train_path+'Y_train_hourly_toy.npz')['arr_0']
+
 GOSE_train=np.load(train_path+'X_train_hourly.npz')['arr_0']
 StageIV_train=np.load(train_path+'Y_train_hourly.npz')['arr_0']
 
@@ -64,8 +67,8 @@ def train_epoch_identification(model, optimizer, scheduler, criterion, data_load
         y = (y>0.1).to(device).long().view(-1)
         optimizer.zero_grad()
         # x[torch.isnan(x)]=0
-        if torch.isnan(x).any():
-            print('NO1')
+        # if torch.isnan(x).any():
+        #     print('NO1')
         out = model(x)
 
         loss = criterion(out,y)
@@ -96,6 +99,7 @@ def train_epoch_estimation(model, optimizer, scheduler, criterion, data_loader, 
 
     for idx, (x,y,T,row,col,X,Y) in enumerate(data_loader):
         x = x.to(device).float()
+        y=y[:,14,14]
         y = y.to(device).float().view(-1)
 
         optimizer.zero_grad()
@@ -135,9 +139,6 @@ def evaluation_identification(model, criterion, loader, device, config, mode='va
         y=y[:,14,14]
         y = (y>0.1).to(device).long().view(-1)
         with torch.no_grad():
-            # x[torch.isnan(x)]=0
-            if torch.isnan(x).any():
-                print('NO2')
             out = model(x)
             loss = criterion(out,y)
 
@@ -165,12 +166,10 @@ def evaluation_estimation(model, criterion, loader, device, config, mode='val'):
 
     for idx, (x,y,T,row,col,X,Y) in enumerate(loader):
         x = x.to(device).float()
+        y=y[:,14,14]
         y = y.to(device).float().view(-1)
 
         with torch.no_grad():
-            if torch.isnan(x).any():
-                print('NO2')
-            # x[torch.isnan(x)]=0
             out = model(x).view(-1)
             loss = criterion(out,y.long())
 
@@ -237,7 +236,7 @@ def load_data(config):
                             win_size=14,
                             R_num=config['test_R'],
                             NR_num=config['test_NR'],
-                            # evaluate=True
+                            evaluate=True
                         ).split_dataset()
     test_loader  = CustomDatasetDataLoader( X=GOSE_val, 
                                             Y=StageIV_val,
@@ -257,7 +256,7 @@ def main(config):
     train_loader,val_loader,test_loader=load_data(config)
 
     model=IPECNet(nc=[1,16,16,32,32],padding_type='zero',norm_layer=nn.BatchNorm2d,task=config['task'])
-    model = torch.nn.DataParallel(model.to(device), device_ids=[0,1])
+    model = torch.nn.DataParallel(model.to(device), device_ids=[0])
     optimizer = torch.optim.SGD(model.parameters(),lr=config['lr'])
     scheduler = lr_scheduler.StepLR(optimizer, step_size=1000, gamma=0.1)
     if config['task']=='identification':
@@ -325,36 +324,34 @@ if __name__ == '__main__':
     parser.add_argument('--rdm_seed', default=1, type=int, help='Random seed')
     parser.add_argument('--display_step', default=10, type=int,
                         help='Interval in batches between display of training metrics')
-    parser.add_argument('--res_dir', default='/usr/data/gzy/Precipitation_Estimation/results', type=str)
+    parser.add_argument('--res_dir', default='./results', type=str)
     parser.add_argument('--ex_name', default='001', type=str)
 
     # dataset parameters
     parser.add_argument('--task', default='identification', type=str)
-    parser.add_argument('--train_R', default=50000, type=int)
-    parser.add_argument('--train_NR', default=50000, type=int)
+    parser.add_argument('--train_R', default=2000, type=int)
+    parser.add_argument('--train_NR', default=2000, type=int)
 
-    parser.add_argument('--val_R', default=10000, type=int)
-    parser.add_argument('--val_NR', default=10000, type=int)
+    parser.add_argument('--val_R', default=1000, type=int)
+    parser.add_argument('--val_NR', default=1000, type=int)
 
-    parser.add_argument('--test_R', default=10000, type=int)
-    parser.add_argument('--test_NR', default=10000, type=int)
+    parser.add_argument('--test_R', default=1000, type=int)
+    parser.add_argument('--test_NR', default=1000, type=int)
 
 
     # Training parameters
-    parser.add_argument('--epochs', default=100, type=int, help='Number of epochs per fold')
+    parser.add_argument('--epochs', default=10, type=int, help='Number of epochs per fold')
     parser.add_argument('--batch_size', default=1024, type=int, help='Batch size')
     parser.add_argument('--lr', default=0.001, type=float, help='Learning rate')
     parser.add_argument('--patience', default=8, type=int)
     parser.add_argument('--delta', default=0, type=float)
 
     # estimation parameters
-    parser.add_argument('--w', default=1, type=float, help='weight of KL loss')
-    parser.add_argument('--h', default=2.5, type=float, help='window size of density estimation')
+    parser.add_argument('--w', default=-1, type=float, help='weight of KL loss')
+    parser.add_argument('--h', default=1, type=float, help='window size of density estimation')
     parser.add_argument('--X_min', default=-10, type=float, help='minimum of rainfull')
     parser.add_argument('--X_max', default=60, type=float, help='maximum of rainfull')
     parser.add_argument('--bins', default=70, type=float, help='bins of rainfull')
-
-
 
 
     args = parser.parse_args()
