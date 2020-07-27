@@ -39,17 +39,17 @@ from Estimation.models.Loss import Estimation_Loss
 OneHot=lambda label,C: torch.zeros(label.shape[0],C).scatter_(1,label.view(-1,1),1)
 
 train_path='/usr/commondata/weather/dataset_release/IR_dataset_QingHua/'
-GOSE_test=GOSE_val=GOSE_train=np.load(train_path+'X_train_hourly_toy.npz')['arr_0']
-StageIV_test=StageIV_val=StageIV_train=np.load(train_path+'Y_train_hourly_toy.npz')['arr_0']
+# GOSE_test=GOSE_val=GOSE_train=np.load(train_path+'X_train_hourly_toy.npz')['arr_0']
+# StageIV_test=StageIV_val=StageIV_train=np.load(train_path+'Y_train_hourly_toy.npz')['arr_0']
 
-# GOSE_train=np.load(train_path+'X_train_hourly.npz')['arr_0']
-# StageIV_train=np.load(train_path+'Y_train_hourly.npz')['arr_0']
+GOSE_train=np.load(train_path+'X_train_hourly.npz')['arr_0']
+StageIV_train=np.load(train_path+'Y_train_hourly.npz')['arr_0']
 
-# GOSE_val=np.load(train_path+'X_val_hourly.npz')['arr_0']
-# StageIV_val=np.load(train_path+'Y_val_hourly.npz')['arr_0']
+GOSE_val=np.load(train_path+'X_val_hourly.npz')['arr_0']
+StageIV_val=np.load(train_path+'Y_val_hourly.npz')['arr_0']
 
-# GOSE_test=np.load(train_path+'X_test_C_summer_hourly.npz')['arr_0']
-# StageIV_test=np.load(train_path+'Y_test_C_summer_hourly.npz')['arr_0']
+GOSE_test=np.load(train_path+'X_test_C_summer_hourly.npz')['arr_0']
+StageIV_test=np.load(train_path+'Y_test_C_summer_hourly.npz')['arr_0']
 
 
 def save_info(filename,loginfo):
@@ -66,9 +66,7 @@ def train_epoch_identification(model, optimizer, scheduler, criterion, data_load
         y=y[:,14,14]
         y = (y>0.1).to(device).long().view(-1)
         optimizer.zero_grad()
-        
-        # if torch.isnan(x).any():
-        #     print('NO1')
+
         out = model(x)
 
         loss = criterion(out,y)
@@ -344,10 +342,10 @@ if __name__ == '__main__':
     parser.add_argument('--lr', default=0.001, type=float, help='Learning rate')
     parser.add_argument('--patience', default=8, type=int)
     parser.add_argument('--delta', default=0, type=float)
-    parser.add_argument('--gpus',default=1,type=int)
+    parser.add_argument('--gpus',default=2,type=int)
 
     # estimation parameters
-    parser.add_argument('--w', default=1, type=float, help='weight of KL loss')
+    parser.add_argument('--w', default=1000, type=float, help='weight of KL loss')
     parser.add_argument('--sigma', default=2.5, type=float, help='window size of density estimation')
     parser.add_argument('--X_min', default=-10, type=float, help='minimum of rainfull')
     parser.add_argument('--X_max', default=60, type=float, help='maximum of rainfull')

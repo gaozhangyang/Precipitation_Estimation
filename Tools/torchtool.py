@@ -31,9 +31,9 @@ class EarlyStopping:
         self.train_step+=1
         score = -val_loss
 
+        self.save_checkpoint(val_loss, model,epoch)
         if self.best_score is None:
             self.best_score = score
-            self.save_checkpoint(val_loss, model,epoch)
             return True #代表需要保存训练时的info
         elif score < self.best_score + self.delta:
             self.counter += 1
@@ -43,7 +43,6 @@ class EarlyStopping:
             return False
         else:
             self.best_score = score
-            self.save_checkpoint(val_loss, model,epoch)
             self.counter = 0
             return True
 
