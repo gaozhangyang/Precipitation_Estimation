@@ -29,8 +29,17 @@ class BinaryClsMeter(object):
 
         '''
         self.N+=pred.shape[0]
-        self.y_true+=target.view(-1).detach().cpu().numpy().tolist()
-        self.y_pred+=pred.view(-1).detach().cpu().numpy().tolist()
+        if type(target) is np.ndarray:
+            self.y_true+=target.reshape(-1).tolist()
+        
+        if type(target) is torch.Tensor:
+            self.y_true+=target.view(-1).detach().cpu().numpy().tolist()
+        
+        if type(pred) is np.ndarray:
+            self.y_pred+=pred.reshape(-1).tolist()
+
+        if type(pred) is torch.Tensor:
+            self.y_pred+=pred.view(-1).detach().cpu().numpy().tolist()
 
 
     def value(self):
@@ -43,8 +52,8 @@ class BinaryClsMeter(object):
                 POD=tp/(tp+fn)
                 FAR=fp/(tp+fp)
                 CSI=tp/(tp+fn+fp)
-                acc0=tp/(tp+fn)
-                acc1=tn/(tn+fp)
+                acc1=tp/(tp+fn)
+                acc0=tn/(tn+fp)
                 return acc0, acc1, POD, FAR, CSI, 
 
             if self.task=='estimation':

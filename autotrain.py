@@ -7,7 +7,7 @@ import time
 
 ## parameter analysis for SAGloss
 
-# cmd=[
+cmd=[
     # 'cd Estimation\nCUDA_VISIBLE_DEVICES={}'+ ' python train.py --task identification --train_R 10000   --train_NR 10000    --batch_size 1024   --res_dir ./ex1 --ex_name 001',
     # 'cd Estimation\nCUDA_VISIBLE_DEVICES={}'+ ' python train.py --task identification --train_R 5000    --train_NR 10000    --batch_size 1024   --res_dir ./ex1 --ex_name 002',
     # 'cd Estimation\nCUDA_VISIBLE_DEVICES={}'+ ' python train.py --task identification --train_R 10000   --train_NR 5000     --batch_size 1024   --res_dir ./ex1 --ex_name 003',
@@ -24,23 +24,40 @@ import time
     # 'cd Estimation\nCUDA_VISIBLE_DEVICES={}'+ ' python train.py --task identification --train_R 5000    --train_NR 5000     --batch_size 1024   --res_dir ./ex2 --ex_name 004',
     # 'cd Estimation\nCUDA_VISIBLE_DEVICES={}'+ ' python train.py --task identification --train_R 10000   --train_NR 10000    --batch_size 1024   --res_dir ./ex2 --ex_name 005',
     # 'cd Estimation\nCUDA_VISIBLE_DEVICES={}'+ ' python train.py --task identification --train_R 50000   --train_NR 50000    --batch_size 1024   --res_dir ./ex2 --ex_name 006',
+    # 'cd Estimation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py --gpus 1 --task identification --train_R 340000   --train_NR 340000    --batch_size 1024   --lr 0.001      --res_dir ./ex2 --ex_name 007',
+    
 
     # 'cd Estimation\nCUDA_VISIBLE_DEVICES={}'+ ' python train.py --task identification --train_R 50000   --train_NR 50000    --batch_size 1024   --lr 0.001      --res_dir ./ex3 --ex_name 001',
     # 'cd Estimation\nCUDA_VISIBLE_DEVICES={}'+ ' python train.py --task identification --train_R 50000   --train_NR 50000    --batch_size 1024   --lr 0.0001     --res_dir ./ex3 --ex_name 002',
     # 'cd Estimation\nCUDA_VISIBLE_DEVICES={}'+ ' python train.py --task identification --train_R 50000   --train_NR 50000    --batch_size 1024   --lr 0.00001    --res_dir ./ex3 --ex_name 003',
     # 'cd Estimation\nCUDA_VISIBLE_DEVICES={}'+ ' python train.py --task identification --train_R 50000   --train_NR 50000    --batch_size 1024   --lr 0.000001   --res_dir ./ex3 --ex_name 004',
-#    ]
 
-
-
-cmd=[
-    'cd Estimation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py --gpus 1 --task identification --train_R 340000   --train_NR 340000    --batch_size 1024   --lr 0.001      --res_dir ./ex2 --ex_name 007',
-
-    'cd Estimation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py --gpus 1 --task estimation     --train_R 470000   --train_NR 470000    --batch_size 1024   --lr 0.001      --res_dir ./ex4 --ex_name 001',
-    'cd Estimation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py --gpus 1 --task estimation     --train_R 470000   --train_NR 470000    --batch_size 1024   --lr 0.0001     --res_dir ./ex4 --ex_name 002',
-    'cd Estimation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py --gpus 1 --task estimation     --train_R 470000   --train_NR 470000    --batch_size 1024   --lr 0.00001    --res_dir ./ex4 --ex_name 003',
-    'cd Estimation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py --gpus 1 --task estimation     --train_R 470000   --train_NR 470000    --batch_size 1024   --lr 0.000001   --res_dir ./ex4 --ex_name 004',
+    'cd Estimation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task identification --train_R 50000   --train_NR 50000    --batch_size 1024   --lr 0.001   --res_dir ./ex4 --ex_name 001',
    ]
+
+
+
+# cmd=[
+    # 'cd Estimation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py --gpus 1 --task estimation     --train_R 470000   --train_NR 470000    --batch_size 1024   --w 1000     --res_dir ./ex4 --ex_name 001',
+    # 'cd Estimation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py --gpus 1 --task estimation     --train_R 470000   --train_NR 470000    --batch_size 1024   --w 100      --res_dir ./ex4 --ex_name 002',
+    # 'cd Estimation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py --gpus 1 --task estimation     --train_R 470000   --train_NR 470000    --batch_size 1024   --w 10       --res_dir ./ex4 --ex_name 003',
+    # 'cd Estimation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py --gpus 1 --task estimation     --train_R 470000   --train_NR 470000    --batch_size 1024   --w 1        --res_dir ./ex4 --ex_name 004',
+    # 'cd Estimation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py --gpus 1 --task estimation     --train_R 470000   --train_NR 470000    --batch_size 1024   --w 100  --lr 0.0001     --res_dir ./ex4 --ex_name 005',
+    # 'cd Estimation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py --gpus 1 --task estimation     --train_R 470000   --train_NR 470000    --batch_size 1024   --w 1000 --lr 0.0001      --res_dir ./ex4 --ex_name 006',
+    # 'cd Estimation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py --gpus 1 --task estimation     --train_R 470000   --train_NR 470000    --batch_size 1024   --w 100  --lr 0.00001       --res_dir ./ex4 --ex_name 007',
+    # 'cd Estimation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py --gpus 1 --task estimation     --train_R 470000   --train_NR 470000    --batch_size 1024   --w 1000 --lr 0.00001        --res_dir ./ex4 --ex_name 008',
+
+
+    # 'cd Estimation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py --gpus 1 --task estimation     --train_R 100000   --train_NR 100000    --batch_size 1024   --w 1000      --res_dir ./ex5 --ex_name 001',
+    # 'cd Estimation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py --gpus 1 --task estimation     --train_R 100000   --train_NR 100000    --batch_size 1024   --w 100       --res_dir ./ex5 --ex_name 002',
+    # 'cd Estimation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py --gpus 1 --task estimation     --train_R 470000   --train_NR 470000    --batch_size 1024   --w 1000      --res_dir ./ex5 --ex_name 003',
+    # 'cd Estimation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py --gpus 1 --task estimation     --train_R 470000   --train_NR 470000    --batch_size 1024   --w 100       --res_dir ./ex5 --ex_name 004',
+
+    # 'cd Estimation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py --gpus 1 --task estimation     --train_R 100000   --train_NR 100000    --batch_size 1024   --w 1000    --sigma 2  --res_dir ./ex6 --ex_name 001',
+    # 'cd Estimation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py --gpus 1 --task estimation     --train_R 100000   --train_NR 100000    --batch_size 1024   --w 1000    --sigma 5  --res_dir ./ex6 --ex_name 002',
+    # 'cd Estimation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py --gpus 1 --task estimation     --train_R 100000   --train_NR 100000    --batch_size 1024   --w 1000    --sigma 10  --res_dir ./ex6 --ex_name 003',
+    # 'cd Estimation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py --gpus 1 --task estimation     --train_R 100000   --train_NR 100000    --batch_size 1024   --w 1000    --sigma 15  --res_dir ./ex6 --ex_name 004',
+#    ]
 
 
 
@@ -62,7 +79,7 @@ def term(sig_num, addtion):
 if __name__ =='__main__':
     signal.signal(signal.SIGTERM, term)#注册信号量，使得在终端杀死主进程时，子进程也被杀死
     
-    gpus=[0,1,4,7,2]
+    gpus=[7]
     gpustate=Manager().dict({str(i):True for i in gpus})
     processes=[]
     idx=0

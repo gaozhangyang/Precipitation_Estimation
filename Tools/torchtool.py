@@ -26,6 +26,8 @@ class EarlyStopping:
         self.delta = delta
         self.root = root
         self.train_step=0
+        self.best_epoch=1
+        self.best_step=1
 
     def __call__(self, val_loss, model,epoch):
         self.train_step+=1
@@ -34,6 +36,8 @@ class EarlyStopping:
         self.save_checkpoint(val_loss, model,epoch)
         if self.best_score is None:
             self.best_score = score
+            self.best_epoch=epoch
+            self.best_step=self.train_step
             return True #代表需要保存训练时的info
         elif score < self.best_score + self.delta:
             self.counter += 1
@@ -43,6 +47,8 @@ class EarlyStopping:
             return False
         else:
             self.best_score = score
+            self.best_epoch=epoch
+            self.best_step=self.train_step
             self.counter = 0
             return True
 

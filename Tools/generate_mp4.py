@@ -10,10 +10,12 @@ import imageio
 import time
 import matplotlib.pyplot as plt
 import sys
-sys.path.append('/usr/data/gzy/Precipitation_Estimation/')
-import Identification.models.Dataloader as Dataloader
+sys.path.append('/usr/commondata/weather/code/Precipitation_Estimation/')
+import Estimation.models.Dataloader as Dataloader
 import matplotlib.patches as patches
 import torch
+from Estimation.models.Meters import BinaryClsMeter
+import json
 
 toCPU=lambda x: x.detach().cpu().numpy()
 toCUDA=lambda x: torch.tensor(x).cuda()
@@ -203,10 +205,14 @@ class Draw:
     def __init__(self):
         pass
 
-    def generate_XY_MP4(self):
-        train_path='/usr/commondata/weather/dataset_release/IR_dataset_QingHua/'
-        GOSE_train=np.load(train_path+'X_val_hourly.npz')['arr_0']
-        StageIV_train=np.load(train_path+'Y_val_hourly.npz')['arr_0']
+    def generate_XY_MP4(self,
+                        train_path='/usr/commondata/weather/dataset_release/IR_dataset_QingHua/',
+                        data_X='X_val_hourly.npz',
+                        data_Y='Y_val_hourly.npz',
+                        save_path='/usr/data/gzy/Precipitation_Estimation/Visualization/val_center_above_10',
+                        save_name='XY'):
+        GOSE_train=np.load(train_path+data_X)['arr_0']
+        StageIV_train=np.load(train_path+data_Y)['arr_0']
 
         train_samples=Dataloader.IR_Split(     
                                     X=GOSE_train, 
@@ -215,7 +221,8 @@ class Draw:
                                     seed=2020,
                                     shuffle=True,
                                     win_size=14,
-                                    k_num=10000,
+                                    R_num=1000,
+                                    NR_num=10,
                                 ).split_dataset()
 
         train_loader= Dataloader.CustomDatasetDataLoader(  
@@ -243,44 +250,87 @@ class Draw:
             if idx==200:
                 break
         
-        XY_MP4=Plot_XY('/usr/data/gzy/Precipitation_Estimation/Visualization/val_center_above_10')
+        XY_MP4=Plot_XY(save_path)
         XY_MP4.run(30,tasks)
-        XY_MP4.SaveGIF('XY',fps=0.5)
+        XY_MP4.SaveGIF(save_name,fps=0.5)
     
-    def generate_pred_surface_MP4(self,model_path,step=14):
+    def generate_pred_surface_MP4(  self,
+                                    model_path,
+                                    task='identification',
+                                    train_path='/usr/commondata/weather/dataset_release/IR_dataset_QingHua/',
+                                    step=14,
+                                    data_X='X_val_hourly.npz',
+                                    data_Y='Y_val_hourly.npz',
+                                    save_path='/usr/data/gzy/climate/Precipitation_Estimation/Visualization/pred_val_surface_ex3',
+                                    save_name='pred_val'
+                                    ):
         import os
         import matplotlib.pyplot as plt
         from Tools.torchtool import SetSeed
 
         SetSeed(2020)
         
-        # TODO load data
-        train_path='/usr/commondata/weather/'
-        GOSE=np.load(train_path+'X_val_hourly.npz')['arr_0']
-        StageIV=np.load(train_path+'Y_val_hourly.npz')['arr_0']
+        GOSE=np.load(train_path+data_X)['arr_0']
+        StageIV=np.load(train_path+data_Y)['arr_0']
 
         H,W=round((GOSE.shape[2]-29)/step), round((GOSE.shape[3]-29)/step)
 
+        meter=BinaryClsMeter(task=task)
+
         tasks=[]
-        for i in range(0, GOSE.shape[0], int(GOSE.shape[0]/150)):
+        logstep=int(GOSE.shape[0]/150)
+        for i in range(0, GOSE.shape[0]):
             X=torch.tensor(GOSE[i]).float().cuda()
             Y=StageIV[i]
-            pred,y_true=self.test_model(model_path,X=X,Y=Y,step=step)
-            tasks.append((toCPU(X),pred,y_true,i,H,W))
+            pred,y_true=self.test_model(model_path,task,X=X,Y=Y,step=step)
+            if task=='identification':
+                meter.add(pred,y_true)
+            if task=='estimation':
+                mask=y_true>0.1
+                meter.add(pred[mask],y_true[mask])
+
+            if i%logstep==0:
+                if task=='identification':
+                    tasks.append((toCPU(X),pred,y_true,i,H,W))
+                if task=='estimation':
+                    mask=y_true<0.1
+                    y_true[mask]=0
+                    pred[mask]=0
+                    tasks.append((toCPU(X),pred,y_true,i,H,W))
         
-        # TODO save result
-        pred_MP4=Plot_pred_surface('/usr/data/gzy/climate/Precipitation_Estimation/Visualization/pred_val_surface_ex3')
+        ## log test information
+        indicate=meter.value()
+        if task=='estimation':
+            metrics = {
+                            'train_CC': indicate[0],
+                            'train_BIAS': indicate[1],
+                            'train_MSE': indicate[2],
+                            }
+        if task=='identification':
+            metrics =  {
+                        'test_acc0': indicate[0],
+                        'test_acc1': indicate[1],
+                        'test_POD': indicate[2],
+                        'test_FAR': indicate[3],
+                        'test_CSI': indicate[4],
+                        }
+        
+        pred_MP4=Plot_pred_surface(save_path)
         pred_MP4.run(30,tasks)
-        pred_MP4.SaveGIF('pred_val',fps=0.5)
+        pred_MP4.SaveGIF(save_name,fps=0.5)
+
+        filename=os.path.join(save_path, 'test_info.json')
+        with open(filename,'w') as file_obj:
+            json.dump(  {'test_metrics':metrics},file_obj)
 
 
-    def test_model(self,model_path,X,Y,multi_gpu=True,batch_size=1024,step=14):
+    def test_model(self,model_path,task,X,Y,multi_gpu=True,batch_size=1024,step=14):
         from Identification.models.IPEC_model import IPECNet
         import torch.nn as nn
         from collections import OrderedDict
 
         ########################load model######################
-        model=IPECNet(nc=[1,16,16,32,32],padding_type='zero',norm_layer=nn.BatchNorm2d,task='identification')
+        model=IPECNet(nc=[1,16,16,32,32],padding_type='zero',norm_layer=nn.BatchNorm2d,task=task)
         model = torch.nn.DataParallel(model.to('cuda'), device_ids=[0])
         state_dict = torch.load(model_path)
         if multi_gpu:
@@ -307,7 +357,10 @@ class Draw:
             for j in range(14,375-15,step):
                 tmpX=Dataloader.IRDataset.unsafe_crop_center(X,i,j,14,14)
                 test_data[N,:,:,:]=tmpX
-                y_true[N]=(Y[i,j]>0.1)
+                if task=='identification':
+                    y_true[N]=(Y[i,j]>0.1)
+                if task=='estimation':
+                    y_true[N]=Y[i,j]
                 N+=1
         
         #######################get pred###################
@@ -316,7 +369,11 @@ class Draw:
             for i in range(0,L//batch_size+1):
                 scope=range(i*batch_size,min((i+1)*batch_size,L))
                 tmpX=test_data[scope].float().cuda()
-                tmp_pred=np.argmax(model(tmpX).detach().cpu().numpy(),axis=1)
+                tmp_pred=model(tmpX).detach().cpu().numpy()
+                if task=='identification':
+                    tmp_pred=np.argmax(tmp_pred,axis=1)
+                if task=='estimation':
+                    tmp_pred=tmp_pred
                 pred.append(tmp_pred)
 
         pred=np.hstack(pred)
@@ -327,6 +384,17 @@ class Draw:
 
 if __name__ == '__main__':
     draw=Draw()
-    # draw.generate_XY_MP4()
-    draw.generate_pred_surface_MP4( model_path='/usr/data/gzy/climate/Precipitation_Estimation/Identification/ex2/results/003/epoch_5_step_5.pt',
-                                    step=14)
+    # draw.generate_XY_MP4(train_path='/usr/commondata/weather/dataset_release/IR_dataset_QingHua/',
+    #                     data_X='X_val_hourly.npz',
+    #                     data_Y='Y_val_hourly.npz',
+    #                     save_path='/usr/commondata/weather/code/Precipitation_Estimation/Visualization/val_center_above_10',
+    #                     save_name='XY_val')
+
+    draw.generate_pred_surface_MP4( task='estimation',
+                                    model_path='/usr/commondata/weather/code/Precipitation_Estimation/Estimation/ex4/identification/001/epoch_10_step_10.pt',
+                                    step=14,
+                                    data_X='X_val_hourly.npz',
+                                    data_Y='Y_val_hourly.npz',
+                                    save_path='/usr/commondata/weather/code/Precipitation_Estimation/Visualization/estimation_val_surface_ex4/001',
+                                    save_name='pred_val'
+                                    )

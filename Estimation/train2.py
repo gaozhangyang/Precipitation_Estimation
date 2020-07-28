@@ -132,7 +132,7 @@ def train_epoch_estimation(model, optimizer, scheduler, criterion, data_loader, 
         out = model(x).view(-1)
 
         loss = criterion(out,y)
-        print(loss)
+        # print(loss)
 
         loss.backward()
         optimizer.step()
@@ -193,6 +193,7 @@ def load_data(config):
                                 R_num=config['train_R'],
                                 NR_num=config['train_NR'],
                             ).split_dataset()
+
     train_loader= CustomDatasetDataLoader(  X=GOSE_train, 
                                             Y=StageIV_train,
                                             batchSize=config['batch_size'],
@@ -247,7 +248,6 @@ def load_data(config):
 
 def main(config):
     device = torch.device(config['device'])
-    train_loader,val_loader,test_loader=load_data(config)
 
     model=IPECNet(nc=[1,16,16,32,32],padding_type='zero',norm_layer=nn.BatchNorm2d,task=config['task'])
     if config['gpus']==1:
@@ -263,6 +263,8 @@ def main(config):
 
     trainlog = {}
     for epoch in tqdm.tqdm(range(1, config['epochs'] + 1)):
+        train_loader,val_loader,test_loader=load_data(config)
+
         print('EPOCH {}/{}'.format(epoch, config['epochs']))
         print('Train . . . ')
         model.train()
@@ -283,6 +285,7 @@ def main(config):
         if config['task']=='estimation':
             val_metrics = evaluation_estimation(model, criterion, val_loader, device=device, config=config, mode='val')
 
+        val_metrics['best_epoch']=early_stopping.best_epoch
         print(val_metrics)
 
 
@@ -298,7 +301,7 @@ def main(config):
 
     print('Testing best epoch . . .')
     model.load_state_dict(
-            torch.load( os.path.join(config['res_dir'],'epoch_{}_step_{}.pt'.format(epoch,early_stopping.train_step)) )
+            torch.load( os.path.join(config['res_dir'],'epoch_{}_step_{}.pt'.format(early_stopping.best_epoch,early_stopping.best_step)) )
         )
     model.eval()
 
@@ -312,6 +315,7 @@ def main(config):
     filename=os.path.join(config['res_dir'], 'test_info.json')
     with open(filename,'w') as file_obj:
         json.dump(  {'test_metrics':test_metrics},file_obj)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -335,7 +339,6 @@ if __name__ == '__main__':
     parser.add_argument('--test_R', default=10000, type=int)
     parser.add_argument('--test_NR', default=10000, type=int)
 
-
     # Training parameters
     parser.add_argument('--epochs', default=100, type=int, help='Number of epochs per fold')
     parser.add_argument('--batch_size', default=1024, type=int, help='Batch size')
@@ -345,13 +348,12 @@ if __name__ == '__main__':
     parser.add_argument('--gpus',default=2,type=int)
 
     # estimation parameters
-    parser.add_argument('--w', default=1000, type=float, help='weight of KL loss')
+    parser.add_argument('--w', default=10, type=float, help='weight of KL loss')
     parser.add_argument('--sigma', default=2.5, type=float, help='window size of density estimation')
     parser.add_argument('--X_min', default=-10, type=float, help='minimum of rainfull')
     parser.add_argument('--X_max', default=60, type=float, help='maximum of rainfull')
     parser.add_argument('--bins', default=70, type=float, help='bins of rainfull')
     
-
 
     args = parser.parse_args()
     config = args.__dict__
