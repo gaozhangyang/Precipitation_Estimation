@@ -48,12 +48,19 @@ class BinaryClsMeter(object):
             return None
         else:
             if self.task=='identification':
-                tn, fp, fn, tp=confusion_matrix(self.y_true,self.y_pred ).ravel()
-                POD=tp/(tp+fn)
-                FAR=fp/(tp+fp)
-                CSI=tp/(tp+fn+fp)
-                acc1=tp/(tp+fn)
-                acc0=tn/(tn+fp)
+                n=confusion_matrix(self.y_true,self.y_pred ).T
+                POD=n[1,1]/(n[1,1]+n[0,1])
+                FAR=n[1,0]/(n[1,1]+n[1,0])
+                CSI=n[1,1]/(n[1,1]+n[0,1]+n[1,0])
+                acc0=n[0,0]/np.sum(n[:,0])
+                acc1=n[1,1]/np.sum(n[:,1])
+                self.n=n
+                # tn, fp, fn, tp=confusion_matrix(self.y_true,self.y_pred ).ravel()
+                # POD=tp/(tp+fn)
+                # FAR=fp/(tp+fp)
+                # CSI=tp/(tp+fn+fp)
+                # acc1=tp/(tp+fn)
+                # acc0=tn/(tn+fp)
                 return acc0, acc1, POD, FAR, CSI, 
 
             if self.task=='estimation':

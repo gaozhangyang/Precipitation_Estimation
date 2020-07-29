@@ -11,10 +11,10 @@ import time
 import matplotlib.pyplot as plt
 import sys
 sys.path.append('/usr/commondata/weather/code/Precipitation_Estimation/')
-import Estimation.models.Dataloader as Dataloader
+import Precipitation.models.Dataloader as Dataloader
 import matplotlib.patches as patches
 import torch
-from Estimation.models.Meters import BinaryClsMeter
+from Precipitation.models.Meters import BinaryClsMeter
 import json
 
 toCPU=lambda x: x.detach().cpu().numpy()
@@ -313,6 +313,7 @@ class Draw:
                         'test_POD': indicate[2],
                         'test_FAR': indicate[3],
                         'test_CSI': indicate[4],
+                        'n':meter.n.tolist()
                         }
         
         pred_MP4=Plot_pred_surface(save_path)
@@ -325,7 +326,7 @@ class Draw:
 
 
     def test_model(self,model_path,task,X,Y,multi_gpu=True,batch_size=1024,step=14):
-        from Identification.models.IPEC_model import IPECNet
+        from Precipitation.models.IPEC_model import IPECNet
         import torch.nn as nn
         from collections import OrderedDict
 
@@ -390,11 +391,11 @@ if __name__ == '__main__':
     #                     save_path='/usr/commondata/weather/code/Precipitation_Estimation/Visualization/val_center_above_10',
     #                     save_name='XY_val')
 
-    draw.generate_pred_surface_MP4( task='estimation',
-                                    model_path='/usr/commondata/weather/code/Precipitation_Estimation/Estimation/ex4/identification/001/epoch_10_step_10.pt',
+    draw.generate_pred_surface_MP4( task='identification',
+                                    model_path='/usr/commondata/weather/code/Precipitation_Estimation/Precipitation/results/identification/003/epoch_3_step_3.pt',
                                     step=14,
                                     data_X='X_val_hourly.npz',
                                     data_Y='Y_val_hourly.npz',
-                                    save_path='/usr/commondata/weather/code/Precipitation_Estimation/Visualization/estimation_val_surface_ex4/001',
-                                    save_name='pred_val'
+                                    save_path='/usr/commondata/weather/code/Precipitation_Estimation/Precipitation/results/identification/003/mp4_val_epoch3',
+                                    save_name='pred_val_epoch3'
                                     )

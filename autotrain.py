@@ -3,11 +3,12 @@ import os
 from multiprocessing import Process,Manager
 import signal
 import time
-
+import pynvml
+pynvml.nvmlInit()
 
 ## parameter analysis for SAGloss
 
-cmd=[
+# cmd=[
     # 'cd Estimation\nCUDA_VISIBLE_DEVICES={}'+ ' python train.py --task identification --train_R 10000   --train_NR 10000    --batch_size 1024   --res_dir ./ex1 --ex_name 001',
     # 'cd Estimation\nCUDA_VISIBLE_DEVICES={}'+ ' python train.py --task identification --train_R 5000    --train_NR 10000    --batch_size 1024   --res_dir ./ex1 --ex_name 002',
     # 'cd Estimation\nCUDA_VISIBLE_DEVICES={}'+ ' python train.py --task identification --train_R 10000   --train_NR 5000     --batch_size 1024   --res_dir ./ex1 --ex_name 003',
@@ -32,8 +33,8 @@ cmd=[
     # 'cd Estimation\nCUDA_VISIBLE_DEVICES={}'+ ' python train.py --task identification --train_R 50000   --train_NR 50000    --batch_size 1024   --lr 0.00001    --res_dir ./ex3 --ex_name 003',
     # 'cd Estimation\nCUDA_VISIBLE_DEVICES={}'+ ' python train.py --task identification --train_R 50000   --train_NR 50000    --batch_size 1024   --lr 0.000001   --res_dir ./ex3 --ex_name 004',
 
-    'cd Estimation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task identification --train_R 50000   --train_NR 50000    --batch_size 1024   --lr 0.001   --res_dir ./ex4 --ex_name 001',
-   ]
+    # 'cd Estimation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task identification --train_R 50000   --train_NR 50000    --batch_size 1024   --lr 0.001   --res_dir ./ex4 --ex_name 001',
+#    ]
 
 
 
@@ -61,6 +62,20 @@ cmd=[
 
 
 
+cmd=[
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task identification --train_R 50000   --train_NR 200000   --batch_size 1024   --res_dir ./results --ex_name 001',
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task identification --train_R 100000   --train_NR 200000   --batch_size 1024   --res_dir ./results --ex_name 002',
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task identification --train_R 340000   --train_NR 340000   --batch_size 1024   --res_dir ./results --ex_name 003',
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task identification --train_R 200000   --train_NR 400000   --batch_size 1024   --res_dir ./results --ex_name 004',
+
+    'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task identification --train_R 50000   --train_NR 250000   --batch_size 1024   --res_dir ./results --ex_name 005',
+    'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task identification --train_R 50000   --train_NR 300000   --batch_size 1024   --res_dir ./results --ex_name 006',
+    'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task identification --train_R 100000   --train_NR 500000   --batch_size 1024   --res_dir ./results --ex_name 007',
+    'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task identification --train_R 100000   --train_NR 700000   --batch_size 1024   --res_dir ./results --ex_name 008',
+    ]
+
+
+
 def run(command,gpuid,gpustate):
     os.system(command.format(gpuid))
     gpustate[str(gpuid)]=True
@@ -79,22 +94,24 @@ def term(sig_num, addtion):
 if __name__ =='__main__':
     signal.signal(signal.SIGTERM, term)#注册信号量，使得在终端杀死主进程时，子进程也被杀死
     
-    gpus=[7]
+    gpus=[0,1,2,3,4,5,6,7]
     gpustate=Manager().dict({str(i):True for i in gpus})
     processes=[]
     idx=0
     while idx<len(cmd):
         #查询是否有可用gpu
         for gpuid in gpus:
-            if gpustate[str(gpuid)]==True:
-                print(idx)
-                gpustate[str(gpuid)]=False
+            handle = pynvml.nvmlDeviceGetHandleByIndex(gpuid)
+            meminfo = pynvml.nvmlDeviceGetMemoryInfo(handle)
+            
+            if meminfo.free/1024**3 > 12:
                 p=Process(target=run,args=(cmd[idx],gpuid,gpustate),name=str(gpuid))
                 p.start()
-                print(gpustate)
+                print('run {}'.format(cmd[idx]))
                 processes.append(p)
-                idx+=1
-                break
+                idx+=1       
+
+        time.sleep(600)
 
     for p in processes:
         p.join()

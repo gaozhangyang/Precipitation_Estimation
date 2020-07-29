@@ -46,6 +46,7 @@ epsilon=1e-10
 class KL_loss(torch.autograd.Function):
     @staticmethod
     def forward(ctx, P, Q):
+        P=P+epsilon
         Q=Q+epsilon
         ctx.save_for_backward(P,Q)
         KL = (P*torch.log(P)-P*torch.log(Q))

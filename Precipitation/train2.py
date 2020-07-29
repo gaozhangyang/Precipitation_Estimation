@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-import random 
+import random
 def SetSeed(seed):
     """function used to set a random seed
     Arguments:
@@ -32,20 +32,24 @@ import json
 import tqdm
 from torch.optim import lr_scheduler
 import sys
-sys.path.append('/usr/data/gzy/Precipitation_Estimation/')
+sys.path.append('/usr/commondata/weather/code/Precipitation_Estimation/')
 from Tools.torchtool import EarlyStopping
+from Precipitation.models.Loss import Estimation_Loss
 
 OneHot=lambda label,C: torch.zeros(label.shape[0],C).scatter_(1,label.view(-1,1),1)
 
 train_path='/usr/commondata/weather/dataset_release/IR_dataset_QingHua/'
+# GOSE_test=GOSE_val=GOSE_train=np.load(train_path+'X_train_hourly_toy.npz')['arr_0']
+# StageIV_test=StageIV_val=StageIV_train=np.load(train_path+'Y_train_hourly_toy.npz')['arr_0']
+
 GOSE_train=np.load(train_path+'X_train_hourly.npz')['arr_0']
 StageIV_train=np.load(train_path+'Y_train_hourly.npz')['arr_0']
 
 GOSE_val=np.load(train_path+'X_val_hourly.npz')['arr_0']
 StageIV_val=np.load(train_path+'Y_val_hourly.npz')['arr_0']
 
-# GOSE_test=np.load(train_path+'X_test_C_summer_hourly.npz')['arr_0']
-# StageIV_test=np.load(train_path+'Y_test_C_summer_hourly.npz')['arr_0']
+GOSE_test=np.load(train_path+'X_test_C_summer_hourly.npz')['arr_0']
+StageIV_test=np.load(train_path+'Y_test_C_summer_hourly.npz')['arr_0']
 
 
 def save_info(filename,loginfo):
@@ -53,8 +57,8 @@ def save_info(filename,loginfo):
         json.dump( loginfo, file_obj)
 
 
-def train_epoch(model, optimizer, scheduler, criterion, data_loader, device, config):
-    acc_meter = BinaryClsMeter()
+def train_epoch_identification(model, optimizer, scheduler, criterion, data_loader, device, config):
+    acc_meter = BinaryClsMeter(config['task'])
     loss_meter = tnt.meter.AverageValueMeter()
 
     for idx, (x,y,T,row,col,X,Y) in enumerate(data_loader):
@@ -62,7 +66,7 @@ def train_epoch(model, optimizer, scheduler, criterion, data_loader, device, con
         y=y[:,14,14]
         y = (y>0.1).to(device).long().view(-1)
         optimizer.zero_grad()
-        x[torch.isnan(x)]=0
+
         out = model(x)
 
         loss = criterion(out,y)
@@ -74,7 +78,7 @@ def train_epoch(model, optimizer, scheduler, criterion, data_loader, device, con
         loss_meter.add(loss.item())
 
         if (idx + 1) % config['display_step'] == 0:
-            print('Step [{}/{}], Loss: {:.4f}'.format(idx + 1, len(data_loader), loss_meter.value()[0]))
+            print('Step [{}/{}], Loss: {:.4f}'.format(idx + 1, len(data_loader), loss.item()))
 
     indicate=acc_meter.value()
     epoch_metrics = {'train_loss': loss_meter.value()[0],
@@ -86,16 +90,14 @@ def train_epoch(model, optimizer, scheduler, criterion, data_loader, device, con
                      }
     return epoch_metrics
 
-
-def evaluation(model, criterion, loader, device, config, mode='val'):
-    acc_meter = BinaryClsMeter()
+def evaluation_identification(model, criterion, loader, device, config, mode='val'):
+    acc_meter = BinaryClsMeter(config['task'])
     loss_meter = tnt.meter.AverageValueMeter()
     for idx, (x,y,T,row,col,X,Y) in enumerate(loader):
         x = x.to(device).float()
         y=y[:,14,14]
         y = (y>0.1).to(device).long().view(-1)
         with torch.no_grad():
-            x[torch.isnan(x)]=0
             out = model(x)
             loss = criterion(out,y)
 
@@ -116,8 +118,71 @@ def evaluation(model, criterion, loader, device, config, mode='val'):
     elif mode == 'test':
         return metrics
 
-def main(config):
-    device = torch.device(config['device'])
+
+def train_epoch_estimation(model, optimizer, scheduler, criterion, data_loader, device, config):
+    acc_meter = BinaryClsMeter(config['task'])
+    loss_meter = tnt.meter.AverageValueMeter()
+
+    for idx, (x,y,T,row,col,X,Y) in enumerate(data_loader):
+        x = x.to(device).float()
+        y=y[:,14,14]
+        y = y.to(device).float().view(-1)
+
+        optimizer.zero_grad()
+        out = model(x).view(-1)
+
+        loss = criterion(out,y)
+
+        loss.backward()
+        optimizer.step()
+        scheduler.step()
+
+        acc_meter.add(out, y)
+        loss_meter.add(loss.item())
+
+
+        if (idx + 1) % config['display_step'] == 0:
+            print('Step [{}/{}], Loss: {:.4f}'.format(idx + 1, len(data_loader), loss.item()))
+
+    indicate=acc_meter.value()
+    epoch_metrics = {'train_loss': loss_meter.value()[0],
+                     'train_CC': indicate[0],
+                     'train_BIAS': indicate[1],
+                     'train_MSE': indicate[2],
+                     }
+    return epoch_metrics
+
+
+def evaluation_estimation(model, criterion, loader, device, config, mode='val'):
+    acc_meter = BinaryClsMeter(config['task'])
+    loss_meter = tnt.meter.AverageValueMeter()
+
+    for idx, (x,y,T,row,col,X,Y) in enumerate(loader):
+        x = x.to(device).float()
+        y=y[:,14,14]
+        y = y.to(device).float().view(-1)
+
+        with torch.no_grad():
+            out = model(x).view(-1)
+            loss = criterion(out,y.long())
+
+        acc_meter.add(out, y)
+        loss_meter.add(loss.item())
+
+    indicate=acc_meter.value()
+    metrics = {'{}_loss'.format(mode): loss_meter.value()[0],
+               '{}_CC'.format(mode): indicate[0],
+               '{}_BIAS'.format(mode): indicate[1],
+               '{}_MSE'.format(mode): indicate[2],
+               }
+
+    if mode == 'val':
+        return metrics
+    elif mode == 'test':
+        return metrics
+
+
+def load_data(config):
     train_samples=IR_Split(     X=GOSE_train, 
                                 Y=StageIV_train,
                                 task=config['task'],
@@ -127,6 +192,7 @@ def main(config):
                                 R_num=config['train_R'],
                                 NR_num=config['train_NR'],
                             ).split_dataset()
+
     train_loader= CustomDatasetDataLoader(  X=GOSE_train, 
                                             Y=StageIV_train,
                                             batchSize=config['batch_size'],
@@ -164,7 +230,7 @@ def main(config):
                             win_size=14,
                             R_num=config['test_R'],
                             NR_num=config['test_NR'],
-                            # evaluate=True
+                            evaluate=True
                         ).split_dataset()
     test_loader  = CustomDatasetDataLoader( X=GOSE_val, 
                                             Y=StageIV_val,
@@ -174,26 +240,54 @@ def main(config):
                                             nThreads=1,
                                             seed=config['rdm_seed']
                                             )
-    
 
-    model=IPECNet(nc=[1,16,16,32,32],padding_type='zero',norm_layer=nn.BatchNorm2d,task='identification')
-    model = torch.nn.DataParallel(model.to(device), device_ids=[0])
+    return train_loader,val_loader,test_loader
+
+
+
+def main(config):
+    device = torch.device(config['device'])
+
+    model=IPECNet(nc=[1,16,16,32,32],padding_type='zero',norm_layer=nn.BatchNorm2d,task=config['task'])
+    if config['gpus']==1:
+        model = torch.nn.DataParallel(model.to(device), device_ids=[0])
+    else:
+        model = torch.nn.DataParallel(model.to(device), device_ids=[0,1])
     optimizer = torch.optim.SGD(model.parameters(),lr=config['lr'])
     scheduler = lr_scheduler.StepLR(optimizer, step_size=1000, gamma=0.1)
-    criterion = nn.CrossEntropyLoss()
+    if config['task']=='identification':
+        criterion = nn.CrossEntropyLoss()
+    if config['task']=='estimation':
+        criterion = Estimation_Loss(config['w'],config['X_min'],config['X_max'],config['bins'],config['sigma'])
 
     trainlog = {}
     for epoch in tqdm.tqdm(range(1, config['epochs'] + 1)):
+        train_loader,val_loader,test_loader=load_data(config)
+
         print('EPOCH {}/{}'.format(epoch, config['epochs']))
         print('Train . . . ')
         model.train()
-        train_metrics = train_epoch(model, optimizer, scheduler, criterion, train_loader, device=device, config=config)
+        if config['task']=='identification':
+            train_metrics = train_epoch_identification(model, optimizer, scheduler, criterion, train_loader, device=device, config=config)
+        
+        if config['task']=='estimation':
+            train_metrics = train_epoch_estimation(model, optimizer, scheduler, criterion, train_loader, device=device, config=config)
+
         print(train_metrics)
+        
 
         print('Validation . . . ')
         model.eval()
-        val_metrics = evaluation(model, criterion, val_loader, device=device, config=config, mode='val')
+        if config['task']=='identification':
+            val_metrics = evaluation_identification(model, criterion, val_loader, device=device, config=config, mode='val')
+        
+        if config['task']=='estimation':
+            val_metrics = evaluation_estimation(model, criterion, val_loader, device=device, config=config, mode='val')
+
+        val_metrics['best_epoch']=early_stopping.best_epoch
         print(val_metrics)
+
+
         trainlog[epoch] = {**train_metrics, **val_metrics}
         
         filename=os.path.join(config['res_dir'], 'train_val_info.json')
@@ -206,15 +300,21 @@ def main(config):
 
     print('Testing best epoch . . .')
     model.load_state_dict(
-            torch.load( os.path.join(config['res_dir'],'epoch_{}_step_{}.pt'.format(epoch,early_stopping.train_step)) )
+            torch.load( os.path.join(config['res_dir'],'epoch_{}_step_{}.pt'.format(early_stopping.best_epoch,early_stopping.best_step)) )
         )
     model.eval()
-    test_metrics = evaluation(model, criterion, test_loader, device=device, mode='test', config=config)
+
+    if config['task']=='identification':
+        test_metrics = evaluation_identification(model, criterion, test_loader, device=device, mode='test', config=config)
+    if config['task']=='estimation':
+        test_metrics = evaluation_estimation(model, criterion, test_loader, device=device, mode='test', config=config)
+
     print(test_metrics)
 
     filename=os.path.join(config['res_dir'], 'test_info.json')
     with open(filename,'w') as file_obj:
         json.dump(  {'test_metrics':test_metrics},file_obj)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -224,12 +324,13 @@ if __name__ == '__main__':
     parser.add_argument('--rdm_seed', default=1, type=int, help='Random seed')
     parser.add_argument('--display_step', default=10, type=int,
                         help='Interval in batches between display of training metrics')
-    parser.add_argument('--res_dir', default='./Identification/results/test', type=str)
+    parser.add_argument('--res_dir', default='./results', type=str)
+    parser.add_argument('--ex_name', default='test', type=str)
 
     # dataset parameters
-    parser.add_argument('--task', default='identification', type=str)
-    parser.add_argument('--train_R', default=50000, type=int)
-    parser.add_argument('--train_NR', default=50000, type=int)
+    parser.add_argument('--task', default='estimation', type=str)
+    parser.add_argument('--train_R', default=2000, type=int)
+    parser.add_argument('--train_NR', default=2000, type=int)
 
     parser.add_argument('--val_R', default=10000, type=int)
     parser.add_argument('--val_NR', default=10000, type=int)
@@ -237,16 +338,25 @@ if __name__ == '__main__':
     parser.add_argument('--test_R', default=10000, type=int)
     parser.add_argument('--test_NR', default=10000, type=int)
 
-
     # Training parameters
     parser.add_argument('--epochs', default=100, type=int, help='Number of epochs per fold')
-    parser.add_argument('--batch_size', default=600, type=int, help='Batch size')
+    parser.add_argument('--batch_size', default=1024, type=int, help='Batch size')
     parser.add_argument('--lr', default=0.001, type=float, help='Learning rate')
     parser.add_argument('--patience', default=8, type=int)
     parser.add_argument('--delta', default=0, type=float)
+    parser.add_argument('--gpus',default=2,type=int)
+
+    # estimation parameters
+    parser.add_argument('--w', default=10, type=float, help='weight of KL loss')
+    parser.add_argument('--sigma', default=2.5, type=float, help='window size of density estimation')
+    parser.add_argument('--X_min', default=-10, type=float, help='minimum of rainfull')
+    parser.add_argument('--X_max', default=60, type=float, help='maximum of rainfull')
+    parser.add_argument('--bins', default=70, type=float, help='bins of rainfull')
+    
 
     args = parser.parse_args()
     config = args.__dict__
+    config['res_dir']=config['res_dir']+'/{}/{}'.format(config['task'],config['ex_name'])
     res=Path(config['res_dir'])
     res.mkdir(parents=True, exist_ok=True )
     pprint.pprint(config)
