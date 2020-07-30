@@ -290,6 +290,7 @@ class Draw:
                 meter.add(pred[mask],y_true[mask])
 
             if i%logstep==0:
+                print(i)
                 if task=='identification':
                     tasks.append((toCPU(X),pred,y_true,i,H,W))
                 if task=='estimation':
@@ -391,11 +392,11 @@ if __name__ == '__main__':
     #                     save_path='/usr/commondata/weather/code/Precipitation_Estimation/Visualization/val_center_above_10',
     #                     save_name='XY_val')
 
-    draw.generate_pred_surface_MP4( task='identification',
-                                    model_path='/usr/commondata/weather/code/Precipitation_Estimation/Precipitation/results/identification/003/epoch_3_step_3.pt',
+    draw.generate_pred_surface_MP4( task='estimation',
+                                    model_path='/usr/commondata/weather/code/Precipitation_Estimation/Precipitation/results/estimation/001/epoch_5_step_5.pt',
                                     step=14,
-                                    data_X='X_val_hourly.npz',
+                                    data_X='X_val_hourly.npz',#X_test_C_summer_hourly
                                     data_Y='Y_val_hourly.npz',
-                                    save_path='/usr/commondata/weather/code/Precipitation_Estimation/Precipitation/results/identification/003/mp4_val_epoch3',
-                                    save_name='pred_val_epoch3'
+                                    save_path='/usr/commondata/weather/code/Precipitation_Estimation/Precipitation/results/estimation/001/mp4_val_epoch5',
+                                    save_name='pred_val_epoch5'
                                     )

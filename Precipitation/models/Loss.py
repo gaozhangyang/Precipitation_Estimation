@@ -2,6 +2,12 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import matplotlib.pyplot as plt
+import time
+from pathlib import Path
+
+toCPU=lambda x: x.detach().cpu().numpy()
+toCUDA=lambda x: torch.tensor(x).cuda()
 
 class gaussian_kde(nn.Module):
     def __init__(self,X_min,X_max,bins,sigma):
@@ -20,28 +26,6 @@ class gaussian_kde(nn.Module):
         return x
 
 
-# class KL_loss(torch.autograd.Function):
-#     @staticmethod
-#     def forward(ctx, P, Q):
-#         ctx.save_for_backward(P,Q)
-#         KL = (P*torch.log(P)-P*torch.log(Q))
-#         mask1=torch.isinf(KL)
-#         mask2=torch.isnan(KL)
-#         mask=mask1|mask2
-#         KL = torch.sum( KL[~mask] )
-#         return KL
-
-#     @staticmethod
-#     def backward(ctx, grad_output):
-#         P,Q = ctx.saved_tensors
-#         grad=-P/Q
-#         mask1=torch.isinf(grad)
-#         mask2=torch.isnan(grad)
-#         mask=mask1|mask2
-#         grad[mask]=0
-#         return None, grad
-
-
 epsilon=1e-10
 class KL_loss(torch.autograd.Function):
     @staticmethod
@@ -50,6 +34,7 @@ class KL_loss(torch.autograd.Function):
         Q=Q+epsilon
         ctx.save_for_backward(P,Q)
         KL = (P*torch.log(P)-P*torch.log(Q))
+        KL = torch.sum(KL)
         mask1=torch.isinf(KL)
         mask2=torch.isnan(KL)
         mask=mask1|mask2
@@ -75,22 +60,34 @@ class Euclidean_distance(nn.Module):
         return torch.norm(pred-y_true)
 
 class Estimation_Loss(nn.Module):
-    def __init__(self,w,X_min,X_max,bins,sigma):
+    def __init__(self,w,X_min,X_max,bins,sigma,mse=False):
         super(Estimation_Loss, self).__init__()
         self.kl_loss=KL_loss(X_min,X_max,bins,sigma)
-        self.ed_loss=Euclidean_distance()
-        # self.ed_loss=nn.MSELoss()
+        if mse:
+            self.ed_loss=nn.MSELoss()
+        else:
+            self.ed_loss=Euclidean_distance()
+
         self.w=w
         self.KL = KL_loss.apply
         self.KDE=gaussian_kde(X_min=X_min,X_max=X_max,bins=bins,sigma=sigma)
     
     def forward(self,pred,y_true):
-        P=self.KDE(y_true)
-        Q=self.KDE(pred)
-        kl_loss=self.KL(P,Q)
-        ed_loss=self.ed_loss(pred,y_true)
-        loss = self.w*kl_loss + ed_loss
-        return loss
+        self.P = self.KDE(y_true)
+        self.Q = self.KDE(pred)
+
+        kl_loss = self.KL(self.P,self.Q)
+        ed_loss = self.ed_loss(pred,y_true)
+        # print(kl_loss)
+
+        # plt.plot(toCPU(self.KDE.centers),toCPU(self.P),label='P')
+        # plt.plot(toCPU(self.KDE.centers),toCPU(self.Q),label='Q')
+        # plt.legend()
+        # figpath=Path('./debug2')/'fig'
+        # figpath.mkdir(exist_ok=True,parents=True)
+        # plt.savefig(figpath/'{}.png'.format(int(time.time())))
+        # plt.close()
+        return kl_loss, ed_loss
 
 
 if __name__ == '__main__':

@@ -62,23 +62,43 @@ pynvml.nvmlInit()
 
 
 
-cmd=[
+# cmd=[
     # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task identification --train_R 50000   --train_NR 200000   --batch_size 1024   --res_dir ./results --ex_name 001',
     # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task identification --train_R 100000   --train_NR 200000   --batch_size 1024   --res_dir ./results --ex_name 002',
     # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task identification --train_R 340000   --train_NR 340000   --batch_size 1024   --res_dir ./results --ex_name 003',
     # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task identification --train_R 200000   --train_NR 400000   --batch_size 1024   --res_dir ./results --ex_name 004',
 
-    'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task identification --train_R 50000   --train_NR 250000   --batch_size 1024   --res_dir ./results --ex_name 005',
-    'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task identification --train_R 50000   --train_NR 300000   --batch_size 1024   --res_dir ./results --ex_name 006',
-    'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task identification --train_R 100000   --train_NR 500000   --batch_size 1024   --res_dir ./results --ex_name 007',
-    'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task identification --train_R 100000   --train_NR 700000   --batch_size 1024   --res_dir ./results --ex_name 008',
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task identification --train_R 50000   --train_NR 250000   --batch_size 1024   --res_dir ./results --ex_name 005',
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task identification --train_R 50000   --train_NR 300000   --batch_size 1024   --res_dir ./results --ex_name 006',
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task identification --train_R 100000   --train_NR 500000   --batch_size 1024   --res_dir ./results --ex_name 007',
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task identification --train_R 100000   --train_NR 700000   --batch_size 1024   --res_dir ./results --ex_name 008',
+    # ]
+
+
+cmd=[
+    'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task estimation  --w 1000 --train_R 100000   --batch_size 1024   --res_dir ./results --ex_name 001',
+    'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task estimation  --w 100  --train_R 100000   --batch_size 1024   --res_dir ./results --ex_name 002',
+    'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task estimation  --w 10   --train_R 100000   --batch_size 1024   --res_dir ./results --ex_name 003',
+    'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task estimation  --w 1    --train_R 100000   --batch_size 1024   --res_dir ./results --ex_name 004',
+    'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task estimation  --w 0.1  --train_R 100000   --batch_size 1024   --res_dir ./results --ex_name 005',
+
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task estimation  --w 1000 --train_R 100000   --batch_size 1024   --res_dir ./results --ex_name 001',
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task estimation  --w 1000 --train_R 200000   --batch_size 1024   --res_dir ./results --ex_name 002',
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task estimation  --w 1000 --train_R 470000   --batch_size 1024   --res_dir ./results --ex_name 003',
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task estimation  --w 100  --train_R 100000   --batch_size 1024   --res_dir ./results --ex_name 004',
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task estimation  --w 100  --train_R 200000   --batch_size 1024   --res_dir ./results --ex_name 005',
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task estimation  --w 100  --train_R 470000   --batch_size 1024   --res_dir ./results --ex_name 006',
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task estimation  --w 10   --train_R 100000   --batch_size 1024   --res_dir ./results --ex_name 007',
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task estimation  --w 10   --train_R 200000   --batch_size 1024   --res_dir ./results --ex_name 008',
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task estimation  --w 10   --train_R 470000   --batch_size 1024   --res_dir ./results --ex_name 009',
     ]
 
 
+min_gpu_memory=12
 
 def run(command,gpuid,gpustate):
     os.system(command.format(gpuid))
-    gpustate[str(gpuid)]=True
+    gpustate[gpuid]+=min_gpu_memory
 
 def term(sig_num, addtion):
     print('terminate process {}'.format(os.getpid()))
@@ -91,30 +111,37 @@ def term(sig_num, addtion):
     except Exception as e:
         print(str(e))
 
+def get_memory(gpuid):
+    handle = pynvml.nvmlDeviceGetHandleByIndex(gpuid)
+    meminfo = pynvml.nvmlDeviceGetMemoryInfo(handle)
+    memory_GB=meminfo.free/1024**3
+    return memory_GB
+
 if __name__ =='__main__':
     signal.signal(signal.SIGTERM, term)#注册信号量，使得在终端杀死主进程时，子进程也被杀死
     
     gpus=[0,1,2,3,4,5,6,7]
-    gpustate=Manager().dict({str(i):True for i in gpus})
+    gpustate=Manager().dict({i:get_memory(i) for i in gpus})
     processes=[]
     idx=0
     while idx<len(cmd):
         #查询是否有可用gpu
         for gpuid in gpus:
-            handle = pynvml.nvmlDeviceGetHandleByIndex(gpuid)
-            meminfo = pynvml.nvmlDeviceGetMemoryInfo(handle)
-            
-            if meminfo.free/1024**3 > 12:
+            if  gpustate[gpuid]> min_gpu_memory:
                 p=Process(target=run,args=(cmd[idx],gpuid,gpustate),name=str(gpuid))
                 p.start()
-                print('run {}'.format(cmd[idx]))
+                print('run {} with gpu {}'.format(cmd[idx],gpuid))
                 processes.append(p)
                 idx+=1       
+                gpustate[gpuid]-=min_gpu_memory
+
+                if idx==len(cmd):
+                    break
 
         time.sleep(600)
 
-    for p in processes:
-        p.join()
+    # for p in processes:
+    #     p.join()
     
     while(1):
         pass
