@@ -25,7 +25,7 @@ import os
 
 
 class IR_Split:
-    def __init__(self,X,Y,task='identification',shuffle=False,seed=2020,win_size=14,R_num=10000,NR_num=10000,evaluate=False):
+    def __init__(self,X,Y,task='identification',shuffle=False,seed=2020,win_size=14,sampling_step=7,R_num=10000,NR_num=10000,evaluate=False):
         self.X=X
         self.Y=Y
         self.win_size=win_size
@@ -34,14 +34,15 @@ class IR_Split:
         self.R_num=R_num
         self.NR_num=NR_num
         self.evaluate=evaluate
+        self.sampling_step=sampling_step
         
     
     def split_R_NR(self,StageIV):
         R_samples=[]
         NR_samples=[]
         for T in range(StageIV.shape[0]):
-            for row in range(self.win_size,StageIV.shape[1]-self.win_size-1,self.win_size):
-                for col in range(self.win_size,StageIV.shape[2]-self.win_size-1,self.win_size):
+            for row in range(self.win_size,StageIV.shape[1]-self.win_size-1,self.sampling_step):
+                for col in range(self.win_size,StageIV.shape[2]-self.win_size-1,self.sampling_step):
                     if StageIV[T,row,col]>0.1:
                         R_samples.append((T,row,col))
                     else:

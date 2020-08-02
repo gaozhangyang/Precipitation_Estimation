@@ -1,4 +1,3 @@
-from os import close
 import torch
 import numpy as np
 import random
@@ -35,12 +34,10 @@ from torch.optim import lr_scheduler
 import sys
 sys.path.append('/usr/commondata/weather/code/Precipitation_Estimation/')
 from Tools.torchtool import EarlyStopping
-from Tools.log import logfunc,plot_estimation
-from Precipitation.models.Loss import Estimation_Loss
+from Tools.log import logfunc
+from Precipitation.models.Loss import Estimation_Loss,Huber_Loss
 from tensorboardX import SummaryWriter
 from Tools.control_parm import LinearSchedular
-import matplotlib.pyplot as plt
-from sklearn import metrics
 
 # os.environ["CUDA_VISIBLE_DEVICES"] = "6"
 
@@ -88,14 +85,12 @@ def train_epoch_identification(model,writer, optimizer, scheduler, criterion, da
         acc_meter.add(torch.argmax(out,dim=1), y)
         loss_meter.add(loss.item())
 
-        writer.add_scalar('train_loss', loss.item(), global_step=writer.train_step)
-        if y.shape[0]==1024:
-            writer.add_figure('identification',plot_estimation(toCPU(torch.argmax(out,dim=1)),toCPU(y)),global_step=writer.train_step,close=True)
-            plt.close()
+        writer.add_scalar('train_softmax_loss', loss.item(), global_step=writer.train_step)
         writer.train_step+=1
 
         if (idx + 1) % config['display_step'] == 0:
             print('Step [{}/{}], Loss: {:.4f}'.format(idx + 1, len(data_loader), loss.item()))
+            logfunc(config,criterion)
 
     indicate=acc_meter.value()
     epoch_metrics = {'train_loss': loss_meter.value()[0],
@@ -105,13 +100,6 @@ def train_epoch_identification(model,writer, optimizer, scheduler, criterion, da
                      'train_FAR': indicate[3],
                      'train_CSI': indicate[4]
                      }
-
-    writer.add_scalar('train_acc0', indicate[0], global_step=writer.train_step)
-    writer.add_scalar('train_acc1', indicate[1], global_step=writer.train_step)
-    writer.add_scalar('train_POD', indicate[2], global_step=writer.train_step)
-    writer.add_scalar('train_FAR', indicate[3], global_step=writer.train_step)
-    writer.add_scalar('train_CSI', indicate[4], global_step=writer.train_step)
-
     return epoch_metrics
 
 def evaluation_identification(model, writer, criterion, loader, device, config, mode='val'):
@@ -136,12 +124,6 @@ def evaluation_identification(model, writer, criterion, loader, device, config, 
                '{}_FAR'.format(mode): indicate[3],
                '{}_CSI'.format(mode): indicate[4],
                }
-    
-    writer.add_scalar('test_acc0', indicate[0], global_step=writer.train_step)
-    writer.add_scalar('test_acc1', indicate[1], global_step=writer.train_step)
-    writer.add_scalar('test_POS', indicate[2], global_step=writer.train_step)
-    writer.add_scalar('test_FAR', indicate[3], global_step=writer.train_step)
-    writer.add_scalar('test_CSI', indicate[4], global_step=writer.train_step)
 
     if mode == 'val':
         return metrics
@@ -150,15 +132,11 @@ def evaluation_identification(model, writer, criterion, loader, device, config, 
         return metrics
 
 ######################estimation######################
-def train_epoch_estimation(model, writer, optimizer, scheduler, criterion, data_loader, device, config, controlers):
-    w_kl_controler,w_ed_controler = controlers
+def train_epoch_estimation(model, writer, optimizer, scheduler, criterion, data_loader, device, config):
     acc_meter = BinaryClsMeter(config['task'])
-    kl_loss_meter = tnt.meter.AverageValueMeter()
-    ed_loss_meter = tnt.meter.AverageValueMeter()
+    loss_meter = tnt.meter.AverageValueMeter()
 
     for idx, (x,y,T,row,col,X,Y) in enumerate(data_loader):
-        config['w_kl'] = w_kl_controler.Step()
-        config['w_ed'] = w_ed_controler.Step()
 
         x = x.to(device).float()
         y=y[:,14,14]
@@ -171,28 +149,18 @@ def train_epoch_estimation(model, writer, optimizer, scheduler, criterion, data_
         #     return grad
         # out.register_hook(hook)
 
-        kl_loss, ed_loss = criterion(out,y)
-        loss=config['w_kl']*kl_loss+ed_loss*config['w_ed']
+        loss = criterion(out,y)
 
         loss.backward()
         optimizer.step()
         scheduler.step()
 
+        loss_meter.add(loss.item())
         acc_meter.add(out, y)
-        kl_loss_meter.add(kl_loss.item())
-        ed_loss_meter.add(ed_loss.item())
 
         writer.add_scalar('train_loss', loss.item(), global_step=writer.train_step)
-        writer.add_scalar('train_kl_loss', kl_loss.item(), global_step=writer.train_step)
-        writer.add_scalar('train_ed_loss', ed_loss.item(), global_step=writer.train_step)
-        writer.add_scalar('train_mse',metrics.mean_squared_error(toCPU(y), toCPU(out)) , global_step=writer.train_step)
-        writer.add_scalar('w_kl', config['w_kl'], global_step=writer.train_step)
-        writer.add_scalar('w_ed', config['w_ed'], global_step=writer.train_step)
         writer.add_histogram('hist_true', toCPU(y), global_step=writer.train_step)
         writer.add_histogram('hist_pred', toCPU(out), global_step=writer.train_step)
-        if y.shape[0]==1024:
-            writer.add_figure('estimate',plot_estimation(toCPU(out),toCPU(y)),global_step=writer.train_step,close=True)
-            plt.close()
         writer.train_step+=1
         
 
@@ -201,16 +169,9 @@ def train_epoch_estimation(model, writer, optimizer, scheduler, criterion, data_
             
 
     indicate=acc_meter.value()
-    kl_loss=kl_loss_meter.value()[0]
-    ed_loss=ed_loss_meter.value()[0]
-
-    writer.add_scalar('train_CC', indicate[0], global_step=writer.train_step)
-    writer.add_scalar('train_BIAS', indicate[1], global_step=writer.train_step)
-    writer.add_scalar('train_MSE', indicate[2], global_step=writer.train_step)
-
-    epoch_metrics = {'train_kl_loss': kl_loss,
-                     'train_ed_loss': ed_loss,
-                     'train_loss': config['w_kl']*kl_loss+config['w_ed']*ed_loss,
+    loss=loss_meter.value()[0]
+    epoch_metrics = {
+                     'train_loss': loss,
                      'train_CC': indicate[0],
                      'train_BIAS': indicate[1],
                      'train_MSE': indicate[2],
@@ -221,8 +182,7 @@ def train_epoch_estimation(model, writer, optimizer, scheduler, criterion, data_
 
 def evaluation_estimation(model, writer, criterion, loader, device, config, mode='val'):
     acc_meter = BinaryClsMeter(config['task'])
-    kl_loss_meter = tnt.meter.AverageValueMeter()
-    ed_loss_meter = tnt.meter.AverageValueMeter()
+    loss_meter = tnt.meter.AverageValueMeter()
 
     for idx, (x,y,T,row,col,X,Y) in enumerate(loader):
         x = x.to(device).float()
@@ -231,24 +191,14 @@ def evaluation_estimation(model, writer, criterion, loader, device, config, mode
 
         with torch.no_grad():
             out = model(x).view(-1)
-            kl_loss, ed_loss = criterion(out,y.long())
+            loss = criterion(out,y)
 
         acc_meter.add(out, y)
-        kl_loss_meter.add(kl_loss.item())
-        ed_loss_meter.add(ed_loss.item())
+        loss_meter.add(loss.item())
 
     indicate=acc_meter.value()
-    kl_loss=kl_loss_meter.value()[0]
-    ed_loss=ed_loss_meter.value()[0]
-    loss = config['w_kl']*kl_loss+config['w_ed']*ed_loss
-
-    writer.add_scalar('test_CC', indicate[0], global_step=writer.train_step)
-    writer.add_scalar('test_BIAS', indicate[1], global_step=writer.train_step)
-    writer.add_scalar('test_MSE', indicate[2], global_step=writer.train_step)
-
-    valmetrics = {
-                '{}_kl_loss'.format(mode): kl_loss,
-                '{}_ed_loss'.format(mode): ed_loss,
+    loss=loss_meter.value()[0]
+    metrics = {
                 '{}_loss'.format(mode): loss,
                 '{}_CC'.format(mode): indicate[0],
                 '{}_BIAS'.format(mode): indicate[1],
@@ -256,10 +206,10 @@ def evaluation_estimation(model, writer, criterion, loader, device, config, mode
                 }
     
     if mode == 'val':
-        return valmetrics
+        return metrics
 
     elif mode == 'test':
-        return valmetrics
+        return metrics
 
 
 #####################data loaders#####################
@@ -270,7 +220,6 @@ def load_data(config):
                                 seed=config['rdm_seed'],
                                 shuffle=True,
                                 win_size=14,
-                                sampling_step=config['sampling_step'],
                                 R_num=config['train_R'],
                                 NR_num=config['train_NR'],
                             ).split_dataset()
@@ -290,7 +239,6 @@ def load_data(config):
                             seed=config['rdm_seed'],
                             shuffle=True,
                             win_size=14,
-                            sampling_step=config['sampling_step'],
                             R_num=config['val_R'],
                             NR_num=config['val_NR'],
                             # evaluate=True
@@ -350,7 +298,7 @@ def main(config,writer):
     if config['task']=='identification':
         criterion = nn.CrossEntropyLoss()
     if config['task']=='estimation':
-        criterion = Estimation_Loss(config['X_min'],config['X_max'],config['bins'],config['sigma'],config['mse'])
+        criterion = Huber_Loss(config['hdelta'])
 
 
     if config['epoch_s']>1:
@@ -359,15 +307,12 @@ def main(config,writer):
         writer.train_step = trainlog['train_step']
         best_epoch = trainlog[str(config['epoch_s']-1)]['best_epoch']
         early_stopping.best_score=-trainlog[str(best_epoch)]['val_loss']
-        scheduler = lr_scheduler.StepLR(optimizer, step_size=config['lr_step'], gamma=0.1,last_epoch=writer.train_step)
+        scheduler = lr_scheduler.StepLR(optimizer, step_size=1000, gamma=0.1,last_epoch=writer.train_step)
     else:
         trainlog = {}
         writer.train_step=0
-        scheduler = lr_scheduler.StepLR(optimizer, step_size=500, gamma=0.1)
+        scheduler = lr_scheduler.StepLR(optimizer, step_size=1000, gamma=0.1)
 
-    #####################control parameters#########
-    w_kl_controler = LinearSchedular(config['w_kl_C'])
-    w_ed_controler = LinearSchedular(config['w_ed_C'])
 
     #####################start train################
     for epoch in tqdm.tqdm(range(config['epoch_s'], config['epoch_e'])):
@@ -399,7 +344,6 @@ def main(config,writer):
                                                         train_loader, 
                                                         device=device, 
                                                         config=config,
-                                                        controlers=(w_kl_controler,w_ed_controler),
                                                         )
 
         print(train_metrics)
@@ -447,13 +391,6 @@ def main(config,writer):
 
 
 if __name__ == '__main__':
-    def coords(s):
-        try:
-            x, y, z = s.split(',')
-            return float(x), float(y), int(z)
-        except:
-            raise argparse.ArgumentTypeError("Coordinates must be x,y,z")
-
     parser = argparse.ArgumentParser()
     # Set-up parameters
     parser.add_argument('--device', default='cuda', type=str,
@@ -466,7 +403,6 @@ if __name__ == '__main__':
 
     # dataset parameters
     parser.add_argument('--task', default='estimation', type=str)
-    parser.add_argument('--sampling_step',default=14,type=int)
     parser.add_argument('--train_R', default=10000, type=int)
     parser.add_argument('--train_NR', default=10000, type=int)
 
@@ -484,13 +420,9 @@ if __name__ == '__main__':
     parser.add_argument('--patience', default=8, type=int)
     parser.add_argument('--delta', default=0, type=float)
     parser.add_argument('--gpus',default=1,type=int)
-    parser.add_argument('--lr_step',default=500,type=int)
 
     # estimation parameters
-    # parser.add_argument('--w_kl', default=0.01, type=float, help='weight of KL loss')
-    # parser.add_argument('--w_ed', default=1, type=float, help='weight of ED loss')
-    parser.add_argument('--w_kl_C', default=[(0,0,100),(0,1,100)], dest="w_kl_C", type=coords, nargs='+', help='control vector of kl loss')
-    parser.add_argument('--w_ed_C', default=[(1,1,1000)], dest="w_ed_C", type=coords, nargs='+', help='control vector of ed loss')
+    parser.add_argument('--hdelta', default=0.5, type=float, help='delta of huber loss')
     parser.add_argument('--sigma', default=2.5, type=float, help='window size of density estimation')
     parser.add_argument('--X_min', default=-10, type=float, help='minimum of rainfull')
     parser.add_argument('--X_max', default=60, type=float, help='maximum of rainfull')

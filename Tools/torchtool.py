@@ -56,7 +56,7 @@ class EarlyStopping:
         '''Saves model when validation loss decrease.'''
         if self.verbose:
             print(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
-        torch.save(model.state_dict(), os.path.join(self.root,'epoch_{}_step_{}.pt'.format(epoch,self.train_step)))
+        torch.save(model.state_dict(), os.path.join(self.root,'epoch_{}.pt'.format(epoch)))
         self.val_loss_min = val_loss
 
 

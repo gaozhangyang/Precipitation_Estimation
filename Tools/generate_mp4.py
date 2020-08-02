@@ -16,6 +16,8 @@ import matplotlib.patches as patches
 import torch
 from Precipitation.models.Meters import BinaryClsMeter
 import json
+from matplotlib import colors
+import matplotlib.cm as cm
 
 toCPU=lambda x: x.detach().cpu().numpy()
 toCUDA=lambda x: torch.tensor(x).cuda()
@@ -70,7 +72,8 @@ class GIFPloter():
         path = self.root
         gif_images_path = os.listdir(path+'/')
 
-        gif_images_path.sort()
+        gif_images_path=[img for img in gif_images_path if img[-4:]=='.png']
+        gif_images_path=sorted(gif_images_path,key=lambda x:int(x[:-4]))
         gif_images = []
         for i, path_ in enumerate(gif_images_path):
             print(path_)
@@ -160,12 +163,15 @@ class Plot_pred_surface(GIFPloter):
         super(Plot_pred_surface,self).__init__(root)
     
     def callback(self,task,pid,Process_state):
+        cmap='rainbow'
+        images=[]
+
         x, pred, y_true, T, H, W=task
         N=int(pred.shape[0]**0.5)
         pred=pred.reshape(H,W)
         y_true=y_true.reshape(H,W)
 
-
+        
         fig= plt.figure(constrained_layout=True,figsize=(20, 14))
         gs = fig.add_gridspec(14,20)
 
@@ -185,11 +191,19 @@ class Plot_pred_surface(GIFPloter):
         ax5.imshow(x[1]-x[2])
 
         ax6=fig.add_subplot(gs[4:14, 0:10])
-        ax6.imshow(y_true)
+        images.append( ax6.imshow(y_true,cmap=cmap) )
 
         ax7=fig.add_subplot(gs[4:14, 10:20])
-        ax7.imshow(pred)
+        images.append( ax7.imshow(pred,cmap=cmap) )
         ax7.set_title('{}'.format(T))
+
+        vmin = min(image.get_array().min() for image in images)
+        vmax = max(image.get_array().max() for image in images)
+        norm = colors.Normalize(vmin=vmin, vmax=vmax)
+        for im in images:
+            im.set_norm(norm)
+        
+        fig.colorbar(cm.ScalarMappable(norm=norm, cmap=cmap), ax=[ax6,ax7], orientation='horizontal', fraction=.1)
 
         path=Path(self.root)
         path.mkdir(exist_ok=True,parents=True)
@@ -294,9 +308,9 @@ class Draw:
                 if task=='identification':
                     tasks.append((toCPU(X),pred,y_true,i,H,W))
                 if task=='estimation':
-                    mask=y_true<0.1
-                    y_true[mask]=0
-                    pred[mask]=0
+                    # mask=y_true<0.1
+                    # y_true[mask]=0
+                    # pred[mask]=0
                     tasks.append((toCPU(X),pred,y_true,i,H,W))
         
         ## log test information
@@ -379,9 +393,153 @@ class Draw:
                 pred.append(tmp_pred)
 
         pred=np.hstack(pred)
-        
+    
         return pred,y_true
 
+
+    def generate_final_surface_MP4(  self,
+                                    iden_model_path,
+                                    esti_model_path,
+                                    train_path='/usr/commondata/weather/dataset_release/IR_dataset_QingHua/',
+                                    step=14,
+                                    data_X='X_val_hourly.npz',
+                                    data_Y='Y_val_hourly.npz',
+                                    save_path='/usr/data/gzy/climate/Precipitation_Estimation/Visualization/pred_val_surface_ex3',
+                                    save_name='pred_val'
+                                    ):
+        import os
+        import matplotlib.pyplot as plt
+        from Tools.torchtool import SetSeed
+
+        SetSeed(2020)
+        
+        GOSE=np.load(train_path+data_X)['arr_0']
+        StageIV=np.load(train_path+data_Y)['arr_0']
+
+        H,W=round((GOSE.shape[2]-29)/step), round((GOSE.shape[3]-29)/step)
+
+        iden_meter=BinaryClsMeter(task='identification')
+        esti_meter=BinaryClsMeter(task='estimation')
+
+        tasks=[]
+        logstep=int(GOSE.shape[0]/150)
+        for i in range(0, GOSE.shape[0]):
+            X=torch.tensor(GOSE[i]).float().cuda()
+            Y=StageIV[i]
+            pred,y_true=self.final_test_model(  X=X,
+                                                Y=Y,
+                                                iden_model_path=iden_model_path,
+                                                esti_model_path=esti_model_path,
+                                                step=step,
+                                                save_path=save_path,
+                                                save_name=save_name
+                                                )
+            iden_meter.add(pred>0.1,y_true>0.1)
+            esti_meter.add(pred,y_true)
+
+            if i%logstep==0:
+                print(i)
+                tasks.append((toCPU(X),pred,y_true,i,H,W))
+        
+        ## log test information
+        iden_indicate=iden_meter.value()
+        esti_indicate=esti_meter.value()
+        metrics = {
+                    'train_CC': esti_indicate[0],
+                    'train_BIAS': esti_indicate[1],
+                    'train_MSE': esti_indicate[2],
+                    'test_acc0': iden_indicate[0],
+                    'test_acc1': iden_indicate[1],
+                    'test_POD': iden_indicate[2],
+                    'test_FAR': iden_indicate[3],
+                    'test_CSI': iden_indicate[4],
+                    'n':iden_meter.n.tolist()
+                    }
+        
+        pred_MP4=Plot_pred_surface(save_path)
+        pred_MP4.run(30,tasks)
+        pred_MP4.SaveGIF(save_name,fps=0.5)
+
+        filename=os.path.join(save_path, 'test_info.json')
+        with open(filename,'w') as file_obj:
+            json.dump(  {'test_metrics':metrics},file_obj)
+
+
+    def final_test_model(
+                    self,
+                    X,
+                    Y,
+                    iden_model_path,
+                    esti_model_path,
+                    batch_size=1024,
+                    step=14,
+                    save_path='',
+                    save_name='',
+                    multi_gpu=True
+                    ):
+        from Precipitation.models.IPEC_model import IPECNet
+        import torch.nn as nn
+        from collections import OrderedDict
+
+        ########################load model######################
+        iden_model=IPECNet(nc=[1,16,16,32,32],padding_type='zero',norm_layer=nn.BatchNorm2d,task='identification')
+        esti_model=IPECNet(nc=[1,16,16,32,32],padding_type='zero',norm_layer=nn.BatchNorm2d,task='estimation')
+        iden_model = torch.nn.DataParallel(iden_model.to('cuda'), device_ids=[0])
+        esti_model = torch.nn.DataParallel(esti_model.to('cuda'), device_ids=[0])
+
+        iden_state_dict = torch.load(iden_model_path)
+        esti_state_dict = torch.load(esti_model_path)
+        if multi_gpu:
+            iden_model.load_state_dict(iden_state_dict)
+            esti_model.load_state_dict(esti_state_dict)
+        else:
+            # create new OrderedDict that does not contain `module.`
+            new_iden_state_dict = OrderedDict()
+            for k, v in iden_state_dict.items():
+                name = k[7:] # remove `module.`
+                new_iden_state_dict[name] = v
+            iden_model.load_state_dict(new_iden_state_dict)
+
+            new_esti_state_dict = OrderedDict()
+            for k, v in esti_state_dict.items():
+                name = k[7:] # remove `module.`
+                new_esti_state_dict[name] = v
+            esti_model.load_state_dict(new_esti_state_dict)
+            
+        iden_model=iden_model.cuda()
+        esti_model=esti_model.cuda()
+        
+        
+        #######################generate samples################
+        L=len(range(14,375-15,step))**2
+        test_data=torch.zeros(L,3,29,29)
+        y_true=np.zeros(L)
+
+        N=0
+        for i in range(14,375-15,step):
+            for j in range(14,375-15,step):
+                tmpX=Dataloader.IRDataset.unsafe_crop_center(X,i,j,14,14)
+                test_data[N,:,:,:]=tmpX
+                y_true[N]=Y[i,j]
+                N+=1
+        
+        #######################get pred###################
+        with torch.no_grad():
+            pred=[]
+            for i in range(0,L//batch_size+1):
+                scope=range(i*batch_size,min((i+1)*batch_size,L))
+                tmpX=test_data[scope].float().cuda()
+
+                rain_mask=iden_model(tmpX).detach().cpu().numpy()
+                rain_mask=np.argmax(rain_mask,axis=1)
+                tmp_pred=esti_model(tmpX).detach().cpu().numpy()
+                tmp_pred=tmp_pred.reshape(-1)*rain_mask.reshape(-1)
+                tmp_pred[tmp_pred<0.1]=0
+                pred.append(tmp_pred)
+
+        pred=np.hstack(pred)
+        
+        return pred,y_true
 
 
 if __name__ == '__main__':
@@ -392,11 +550,21 @@ if __name__ == '__main__':
     #                     save_path='/usr/commondata/weather/code/Precipitation_Estimation/Visualization/val_center_above_10',
     #                     save_name='XY_val')
 
-    draw.generate_pred_surface_MP4( task='estimation',
-                                    model_path='/usr/commondata/weather/code/Precipitation_Estimation/Precipitation/results/estimation/001/epoch_5_step_5.pt',
+    # draw.generate_pred_surface_MP4( task='estimation',
+    #                                 model_path='/usr/commondata/weather/code/Precipitation_Estimation/Precipitation/results/estimation/001/epoch_5_step_5.pt',
+    #                                 step=14,
+    #                                 data_X='X_val_hourly.npz',#X_test_C_summer_hourly
+    #                                 data_Y='Y_val_hourly.npz',
+    #                                 save_path='/usr/commondata/weather/code/Precipitation_Estimation/Precipitation/results/estimation/001/mp4_val_epoch5',
+    #                                 save_name='pred_val_epoch5'
+    #                                 )
+
+    draw.generate_final_surface_MP4(
+                                    iden_model_path='/usr/commondata/weather/code/Precipitation_Estimation/Precipitation/results/identification/007/epoch_6_step_6.pt',
+                                    esti_model_path='/usr/commondata/weather/code/Precipitation_Estimation/Precipitation/results/estimation/changew/001/epoch_15.pt',
+                                    train_path='/usr/commondata/weather/dataset_release/IR_dataset_QingHua/',
                                     step=14,
-                                    data_X='X_val_hourly.npz',#X_test_C_summer_hourly
+                                    data_X='X_val_hourly.npz',
                                     data_Y='Y_val_hourly.npz',
-                                    save_path='/usr/commondata/weather/code/Precipitation_Estimation/Precipitation/results/estimation/001/mp4_val_epoch5',
-                                    save_name='pred_val_epoch5'
-                                    )
+                                    save_path='/usr/commondata/weather/code/Precipitation_Estimation/Visualization/final_test4',
+                                    save_name='val')

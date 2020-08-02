@@ -75,12 +75,19 @@ pynvml.nvmlInit()
     # ]
 
 
-cmd=[
-    'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task estimation  --w 1000 --train_R 100000   --batch_size 1024   --res_dir ./results --ex_name 001',
-    'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task estimation  --w 100  --train_R 100000   --batch_size 1024   --res_dir ./results --ex_name 002',
-    'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task estimation  --w 10   --train_R 100000   --batch_size 1024   --res_dir ./results --ex_name 003',
-    'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task estimation  --w 1    --train_R 100000   --batch_size 1024   --res_dir ./results --ex_name 004',
-    'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task estimation  --w 0.1  --train_R 100000   --batch_size 1024   --res_dir ./results --ex_name 005',
+# cmd=[
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task estimation  --w_kl 0     --w_ed 1 --train_R 100000   --batch_size 1024   --res_dir ./results --ex_name 001  --patience 8',
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task estimation  --w_kl 0.01  --w_ed 1 --train_R 100000   --batch_size 1024   --res_dir ./results --ex_name 002  --patience 8',
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task estimation  --w_kl 0.001 --w_ed 1 --train_R 100000   --batch_size 1024   --res_dir ./results --ex_name 003  --patience 8',
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task estimation  --w_kl 0.01 --w_ed 0.001 --train_R 100000   --batch_size 1024   --res_dir ./results --ex_name 005  --patience 8',
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task estimation  --w_kl 0.01 --w_ed 0.0001 --train_R 100000   --batch_size 1024   --res_dir ./results --ex_name 006  --patience 8',
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task estimation  --w_kl 0.01 --w_ed 0.00001 --train_R 100000   --batch_size 1024   --res_dir ./results --ex_name 007  --patience 8',
+    
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task estimation  --w_kl 0.1  --w_ed 1 --train_R 100000   --batch_size 1024   --res_dir ./results --ex_name onlyKL0.1  --patience 8',
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task estimation  --w_kl 0.01   --w_ed 0    --train_R 100000   --batch_size 1024   --res_dir ./results --ex_name onlyKL0.01   --patience 10',
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task estimation  --w_kl 0.001  --w_ed 0    --train_R 100000   --batch_size 1024   --res_dir ./results --ex_name onlyKL0.001  --patience 10',
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task estimation  --w_kl 0.0001  --w_ed 0    --train_R 100000   --batch_size 1024   --res_dir ./results --ex_name onlyKL0.0001  --patience 10',
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task estimation  --w_kl 0.00001  --w_ed 0    --train_R 100000   --batch_size 1024   --res_dir ./results --ex_name onlyKL0.00001  --patience 10',
 
     # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task estimation  --w 1000 --train_R 100000   --batch_size 1024   --res_dir ./results --ex_name 001',
     # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task estimation  --w 1000 --train_R 200000   --batch_size 1024   --res_dir ./results --ex_name 002',
@@ -91,8 +98,134 @@ cmd=[
     # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task estimation  --w 10   --train_R 100000   --batch_size 1024   --res_dir ./results --ex_name 007',
     # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task estimation  --w 10   --train_R 200000   --batch_size 1024   --res_dir ./results --ex_name 008',
     # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py  --gpus 1 --task estimation  --w 10   --train_R 470000   --batch_size 1024   --res_dir ./results --ex_name 009',
-    ]
 
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train.py  --gpus 1 \
+    #                                                                 --task estimation  \
+    #                                                                 --hdelta 0.01 \
+    #                                                                 --train_R 100000   \
+    #                                                                 --batch_size 1024   \
+    #                                                                 --res_dir ./results \
+    #                                                                 --ex_name huber0.01  \
+    #                                                                 --patience 8 \
+    #                                                                 --epoch_s 1 \
+    #                                                                 --epoch_e 100',
+
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train.py  --gpus 1 \
+    #                                                                 --task estimation  \
+    #                                                                 --hdelta 0.1 \
+    #                                                                 --train_R 100000   \
+    #                                                                 --batch_size 1024   \
+    #                                                                 --res_dir ./results \
+    #                                                                 --ex_name huber0.1  \
+    #                                                                 --patience 8 \
+    #                                                                 --epoch_s 1 \
+    #                                                                 --epoch_e 100',
+
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train.py  --gpus 1 \
+    #                                                                 --task estimation  \
+    #                                                                 --hdelta 0.5 \
+    #                                                                 --train_R 100000   \
+    #                                                                 --batch_size 1024   \
+    #                                                                 --res_dir ./results \
+    #                                                                 --ex_name huber0.5  \
+    #                                                                 --patience 8 \
+    #                                                                 --epoch_s 1 \
+    #                                                                 --epoch_e 100',
+
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train.py  --gpus 1 \
+    #                                                                 --task estimation  \
+    #                                                                 --hdelta 1.0 \
+    #                                                                 --train_R 100000   \
+    #                                                                 --batch_size 1024   \
+    #                                                                 --res_dir ./results \
+    #                                                                 --ex_name huber1.0  \
+    #                                                                 --patience 8 \
+    #                                                                 --epoch_s 1 \
+    #                                                                 --epoch_e 100',
+
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py     --gpus 1 \
+    #                                                                     --task estimation  \
+    #                                                                     --w_kl_C 0,0,1000 0,100,1000 \
+    #                                                                     --w_ed_C 1,1,200 \
+    #                                                                     --train_R 100000   \
+    #                                                                     --batch_size 1024   \
+    #                                                                     --res_dir ./results \
+    #                                                                     --ex_name changew001 \
+    #                                                                     --epoch_s 1 \
+    #                                                                     --epoch_e 100',
+
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py     --gpus 1 \
+    #                                                                     --task estimation  \
+    #                                                                     --w_kl_C 0,0,100 0,10,100 \
+    #                                                                     --w_ed_C 1,1,200 \
+    #                                                                     --train_R 100000   \
+    #                                                                     --batch_size 1024   \
+    #                                                                     --res_dir ./results \
+    #                                                                     --ex_name changew002 \
+    #                                                                     --epoch_s 1 \
+    #                                                                     --epoch_e 100',
+
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py     --gpus 1 \
+    #                                                                     --task estimation  \
+    #                                                                     --w_kl_C 0,0,100 0,10,100 \
+    #                                                                     --w_ed_C 1,1,200 \
+    #                                                                     --train_R 100000   \
+    #                                                                     --batch_size 1024   \
+    #                                                                     --res_dir ./results \
+    #                                                                     --ex_name changew/001 \
+    #                                                                     --epoch_s 1 \
+    #                                                                     --epoch_e 100 \
+    #                                                                     --patience 100',
+
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py     --gpus 1 \
+    #                                                                     --task estimation  \
+    #                                                                     --w_kl_C 0,0,100 0,10,100 10,100,1200 \
+    #                                                                     --w_ed_C 1,1,200 \
+    #                                                                     --train_R 100000   \
+    #                                                                     --batch_size 1024   \
+    #                                                                     --res_dir ./results \
+    #                                                                     --ex_name changew/002 \
+    #                                                                     --epoch_s 1 \
+    #                                                                     --epoch_e 100 \
+    #                                                                     --patience 100',
+
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py     --gpus 1 \
+    #                                                                     --task estimation  \
+    #                                                                     --w_kl_C 0,0,100 0,10,100 \
+    #                                                                     --w_ed_C 1,1,200 \
+    #                                                                     --train_R 470000   \
+    #                                                                     --batch_size 1024   \
+    #                                                                     --res_dir ./results \
+    #                                                                     --ex_name changew/003 \
+    #                                                                     --epoch_s 1 \
+    #                                                                     --epoch_e 100 \
+    #                                                                     --patience 100 \
+    #                                                                     --sampling_step 4',
+
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py     --gpus 1 \
+    #                                                                     --task estimation  \
+    #                                                                     --w_kl_C 0,0,100 0,10,100 10,100,1200 \
+    #                                                                     --w_ed_C 1,1,200 \
+    #                                                                     --train_R 470000   \
+    #                                                                     --batch_size 1024   \
+    #                                                                     --res_dir ./results \
+    #                                                                     --ex_name changew/004 \
+    #                                                                     --epoch_s 1 \
+    #                                                                     --epoch_e 100 \
+    #                                                                     --patience 100\
+    #                                                                     --sampling_step 4',
+    # ]
+
+
+cmd=[
+    'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py --gpus 1 \
+                                                                    --task identification \
+                                                                    --train_R 100000   \
+                                                                    --train_NR 500000   \
+                                                                    --batch_size 1024   \
+                                                                    --res_dir ./results \
+                                                                    --ex_name 008',
+]
 
 min_gpu_memory=12
 
@@ -140,8 +273,8 @@ if __name__ =='__main__':
 
         time.sleep(600)
 
-    # for p in processes:
-    #     p.join()
+    for p in processes:
+        p.join()
     
     while(1):
         pass
