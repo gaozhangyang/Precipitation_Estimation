@@ -36,7 +36,7 @@ import sys
 sys.path.append('/usr/commondata/weather/code/Precipitation_Estimation/')
 from Tools.torchtool import EarlyStopping
 from Tools.log import logfunc,plot_estimation
-from Precipitation.models.Loss import Estimation_Loss
+from B_Precipitation.models.Loss import Estimation_Loss,SoftmaxLoss
 from tensorboardX import SummaryWriter
 from Tools.control_parm import LinearSchedular
 import matplotlib.pyplot as plt
@@ -72,15 +72,16 @@ def train_epoch_identification(model,writer, optimizer, scheduler, criterion, da
     acc_meter = BinaryClsMeter(config['task'])
     loss_meter = tnt.meter.AverageValueMeter()
 
-    for idx, (x,y,T,row,col,X,Y) in enumerate(data_loader):
+    for idx, (x,y,weight,T,row,col,X,Y) in enumerate(data_loader):
         x = x.to(device).float()
         y=y[:,14,14]
         y = (y>0.1).to(device).long().view(-1)
+        weight = weight.to(device).float()
         optimizer.zero_grad()
 
         out = model(x)
 
-        loss = criterion(out,y)
+        loss = criterion(out,y,weight)
         loss.backward()
         optimizer.step()
         scheduler.step()
@@ -96,6 +97,7 @@ def train_epoch_identification(model,writer, optimizer, scheduler, criterion, da
 
         if (idx + 1) % config['display_step'] == 0:
             print('Step [{}/{}], Loss: {:.4f}'.format(idx + 1, len(data_loader), loss.item()))
+        
 
     indicate=acc_meter.value()
     epoch_metrics = {'train_loss': loss_meter.value()[0],
@@ -117,13 +119,14 @@ def train_epoch_identification(model,writer, optimizer, scheduler, criterion, da
 def evaluation_identification(model, writer, criterion, loader, device, config, mode='val'):
     acc_meter = BinaryClsMeter(config['task'])
     loss_meter = tnt.meter.AverageValueMeter()
-    for idx, (x,y,T,row,col,X,Y) in enumerate(loader):
+    for idx, (x,y,weight,T,row,col,X,Y) in enumerate(loader):
         x = x.to(device).float()
         y=y[:,14,14]
         y = (y>0.1).to(device).long().view(-1)
+        weight = weight.to(device).float()
         with torch.no_grad():
             out = model(x)
-            loss = criterion(out,y)
+            loss = criterion(out,y,weight)
 
         acc_meter.add(torch.argmax(out,dim=1), y)
         loss_meter.add(loss.item())
@@ -156,13 +159,14 @@ def train_epoch_estimation(model, writer, optimizer, scheduler, criterion, data_
     kl_loss_meter = tnt.meter.AverageValueMeter()
     ed_loss_meter = tnt.meter.AverageValueMeter()
 
-    for idx, (x,y,T,row,col,X,Y) in enumerate(data_loader):
+    for idx, (x,y,weight,T,row,col,X,Y) in enumerate(data_loader):
         config['w_kl'] = w_kl_controler.Step()
         config['w_ed'] = w_ed_controler.Step()
 
         x = x.to(device).float()
         y=y[:,14,14]
         y = y.to(device).float().view(-1)
+        weight = weight.to(device).float()
 
         optimizer.zero_grad()
         out = model(x).view(-1)
@@ -171,7 +175,7 @@ def train_epoch_estimation(model, writer, optimizer, scheduler, criterion, data_
         #     return grad
         # out.register_hook(hook)
 
-        kl_loss, ed_loss = criterion(out,y)
+        kl_loss, ed_loss = criterion(out,y,weight)
         loss=config['w_kl']*kl_loss+ed_loss*config['w_ed']
 
         loss.backward()
@@ -198,6 +202,7 @@ def train_epoch_estimation(model, writer, optimizer, scheduler, criterion, data_
 
         if (idx + 1) % config['display_step'] == 0:
             print('Step [{}/{}], Loss: {:.4f}'.format(idx + 1, len(data_loader), loss.item()))
+        
             
 
     indicate=acc_meter.value()
@@ -224,14 +229,15 @@ def evaluation_estimation(model, writer, criterion, loader, device, config, mode
     kl_loss_meter = tnt.meter.AverageValueMeter()
     ed_loss_meter = tnt.meter.AverageValueMeter()
 
-    for idx, (x,y,T,row,col,X,Y) in enumerate(loader):
+    for idx, (x,y,weight,T,row,col,X,Y) in enumerate(loader):
         x = x.to(device).float()
         y=y[:,14,14]
         y = y.to(device).float().view(-1)
+        weight = weight.to(device).float()
 
         with torch.no_grad():
             out = model(x).view(-1)
-            kl_loss, ed_loss = criterion(out,y.long())
+            kl_loss, ed_loss = criterion(out,y.long(),weight)
 
         acc_meter.add(out, y)
         kl_loss_meter.add(kl_loss.item())
@@ -264,19 +270,19 @@ def evaluation_estimation(model, writer, criterion, loader, device, config, mode
 
 #####################data loaders#####################
 def load_data(config):
-    train_samples=IR_Split(     X=GOSE_train, 
+    train_samples,train_weight=IR_Split(     X=GOSE_train, 
                                 Y=StageIV_train,
                                 task=config['task'],
                                 seed=config['rdm_seed'],
-                                shuffle=True,
                                 win_size=14,
                                 sampling_step=config['sampling_step'],
-                                R_num=config['train_R'],
-                                NR_num=config['train_NR'],
+                                R_w=config['R_w'],
+                                NR_w=config['NR_w'],
                             ).split_dataset()
 
     train_loader= CustomDatasetDataLoader(  X=GOSE_train, 
                                             Y=StageIV_train,
+                                            weights=train_weight,
                                             batchSize=config['batch_size'],
                                             selected_samples=train_samples,
                                             win_size=14,
@@ -284,19 +290,19 @@ def load_data(config):
                                             seed=config['rdm_seed'],
                                             )
     
-    val_samples=IR_Split(   X=GOSE_val, 
+    val_samples,val_weight=IR_Split(   X=GOSE_val, 
                             Y=StageIV_val,
                             task=config['task'],
                             seed=config['rdm_seed'],
-                            shuffle=True,
                             win_size=14,
                             sampling_step=config['sampling_step'],
-                            R_num=config['val_R'],
-                            NR_num=config['val_NR'],
+                            R_w=config['R_w'],
+                            NR_w=config['NR_w'],
                             # evaluate=True
                         ).split_dataset()
     val_loader  = CustomDatasetDataLoader(  X=GOSE_val, 
                                             Y=StageIV_val,
+                                            weights=val_weight,
                                             batchSize=config['batch_size'],
                                             selected_samples=val_samples,  
                                             win_size=14,
@@ -305,18 +311,19 @@ def load_data(config):
                                             )
 
 
-    test_samples=IR_Split(  X=GOSE_val, 
+
+    test_samples,test_weight=IR_Split(  X=GOSE_val, 
                             Y=StageIV_val,
                             task=config['task'],
                             seed=config['rdm_seed'],
-                            shuffle=True,
                             win_size=14,
-                            R_num=config['test_R'],
-                            NR_num=config['test_NR'],
+                            R_w=config['R_w'],
+                            NR_w=config['NR_w'],
                             evaluate=True
                         ).split_dataset()
     test_loader  = CustomDatasetDataLoader( X=GOSE_val, 
                                             Y=StageIV_val,
+                                            weights=test_weight,
                                             batchSize=config['batch_size'],
                                             selected_samples=test_samples,  
                                             win_size=14,
@@ -348,9 +355,9 @@ def main(config,writer):
 
     optimizer = torch.optim.SGD(model.parameters(),lr=config['lr'])
     if config['task']=='identification':
-        criterion = nn.CrossEntropyLoss()
+        criterion = SoftmaxLoss()
     if config['task']=='estimation':
-        criterion = Estimation_Loss(config['X_min'],config['X_max'],config['bins'],config['sigma'],config['hdelta'],config['mse'])
+        criterion = Estimation_Loss(config['X_min'],config['X_max'],config['bins'],config['sigma'],config['mse'])
 
 
     if config['epoch_s']>1:
@@ -461,31 +468,25 @@ if __name__ == '__main__':
     parser.add_argument('--rdm_seed', default=1, type=int, help='Random seed')
     parser.add_argument('--display_step', default=10, type=int,
                         help='Interval in batches between display of training metrics')
-    parser.add_argument('--res_dir', default='/usr/commondata/weather/code/Precipitation_Estimation/Precipitation/results', type=str)
-    parser.add_argument('--ex_name', default='onlyKL', type=str)
+    parser.add_argument('--res_dir', default='/usr/commondata/weather/code/Precipitation_Estimation/B_Precipitation', type=str)
+    parser.add_argument('--ex_name', default='test', type=str)
 
     # dataset parameters
-    parser.add_argument('--task', default='estimation', type=str)
+    parser.add_argument('--task', default='identification', type=str)
     parser.add_argument('--sampling_step',default=14,type=int)
-    parser.add_argument('--train_R', default=10000, type=int)
-    parser.add_argument('--train_NR', default=10000, type=int)
-
-    parser.add_argument('--val_R', default=10000, type=int)
-    parser.add_argument('--val_NR', default=10000, type=int)
-
-    parser.add_argument('--test_R', default=10000, type=int)
-    parser.add_argument('--test_NR', default=10000, type=int)
+    parser.add_argument('--R_w', default=1, type=float)
+    parser.add_argument('--NR_w', default=1, type=float)
 
     # Training parameters
     parser.add_argument('--epoch_s', default=1, type=int, help='start epoch')
     parser.add_argument('--epoch_e', default=10, type=int, help='end epoch')
     parser.add_argument('--batch_size', default=1024, type=int, help='Batch size')
     parser.add_argument('--lr', default=0.001, type=float, help='Learning rate')
-    parser.add_argument('--patience', default=8, type=int)
+    parser.add_argument('--lr_step',default=1000,type=int)
+    parser.add_argument('--patience', default=100, type=int)
     parser.add_argument('--delta', default=0, type=float)
-    parser.add_argument('--hdelta', default=2.5, type=float)
     parser.add_argument('--gpus',default=1,type=int)
-    parser.add_argument('--lr_step',default=500,type=int)
+   
 
     # estimation parameters
     # parser.add_argument('--w_kl', default=0.01, type=float, help='weight of KL loss')

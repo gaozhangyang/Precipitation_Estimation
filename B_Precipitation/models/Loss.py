@@ -37,55 +37,26 @@ class KL_loss(nn.Module):
         KL = torch.sum(KL)
         return KL
 
-# epsilon=1e-10
-# class KL_loss(torch.autograd.Function):
-#     @staticmethod
-#     def forward(ctx, P, Q):
-#         P=P+epsilon
-#         Q=Q+epsilon
-#         ctx.save_for_backward(P,Q)
-#         KL = (P*torch.log(P)-P*torch.log(Q))
-#         KL = torch.sum(KL)
-#         # mask1=torch.isinf(KL)
-#         # mask2=torch.isnan(KL)
-#         # mask=mask1|mask2
-#         # KL = torch.sum( KL[~mask] )
-#         return KL
-
-#     @staticmethod
-#     def backward(ctx, grad_output):
-#         P,Q = ctx.saved_tensors
-#         grad=-P/Q
-#         # mask1=torch.isinf(grad)
-#         # mask2=torch.isnan(grad)
-#         # mask=mask1|mask2
-#         # grad[mask]=0
-#         return None, grad
-
 
 class Euclidean_distance(nn.Module):
     def __init__(self):
         super(Euclidean_distance, self).__init__()
     
-    def forward(self,pred,y_true):
-        return torch.norm(pred-y_true)
+    def forward(self,pred,y_true,weight):
+        return torch.sqrt(torch.sum(weight*(pred-y_true)**2))
 
 class Estimation_Loss(nn.Module):
-    def __init__(self,X_min,X_max,bins,sigma,delta=None,mse=False):
+    def __init__(self,X_min,X_max,bins,sigma,mse=False):
         super(Estimation_Loss, self).__init__()
         if mse:
             self.ed_loss=nn.MSELoss()
         else:
             self.ed_loss=Euclidean_distance()
-        
-        if delta is not None:
-            self.ed_loss=Huber_Loss(delta)
 
-        # self.KL = KL_loss.apply
         self.KL = KL_loss()
         self.KDE=gaussian_kde(X_min=X_min,X_max=X_max,bins=bins,sigma=sigma)
     
-    def forward(self,pred,y_true):
+    def forward(self,pred,y_true,weight):
         self.P = self.KDE(y_true)
         self.Q = self.KDE(pred)
 
@@ -95,22 +66,33 @@ class Estimation_Loss(nn.Module):
         # self.Q.register_hook(hook)
 
         kl_loss = self.KL(self.P,self.Q)
-        ed_loss = self.ed_loss(pred,y_true)
-
+        ed_loss = self.ed_loss(pred,y_true,weight)
         return kl_loss, ed_loss
 
 class Huber_Loss(nn.Module):
-    def __init__(self,delta):
+    def __init__(self,delta) -> None:
         super(Huber_Loss,self).__init__()
         self.delta=delta
     
     def forward(self,pred,true):
         mask = (torch.abs(pred-true)<=self.delta).float()
-        loss = mask*0.5*(true-pred)**2 \
-               + (1-mask)*(self.delta*torch.abs(pred-true)-0.5*self.delta**2)
         # loss = mask*0.5*(true-pred)**2 \
-        #        + (1-mask)*(torch.abs(pred-true)+0.5*self.delta**2-self.delta)
+        #        + (1-mask)*(self.delta*torch.abs(pred-true)-0.5*self.delta**2)
+        loss = mask*0.5*(true-pred)**2 \
+               + (1-mask)*(torch.abs(pred-true)+0.5*self.delta**2-self.delta)
         loss = torch.mean(loss)
+        return loss
+
+
+OneHot=lambda label,C: torch.zeros(label.shape[0],C).cuda().scatter_(1,label.view(-1,1),1)
+class SoftmaxLoss(nn.Module):
+    def __init__(self):
+        super(SoftmaxLoss,self).__init__()
+
+    def forward(self,score,label,sample_weights):
+        onehot_label = OneHot(label,2)
+        logsoftmax=F.log_softmax(score)
+        loss=torch.mean(-torch.sum(onehot_label*logsoftmax,dim=1)*sample_weights)
         return loss
 
 

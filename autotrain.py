@@ -217,14 +217,235 @@ pynvml.nvmlInit()
     # ]
 
 
+# cmd=[
+    # 'cd B_Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py --gpus 1 \
+    #                                                                 --task identification \
+    #                                                                 --R_w 2600000   \
+    #                                                                 --NR_w 2600000   \
+    #                                                                 --batch_size 1024   \
+    #                                                                 --res_dir /usr/commondata/weather/code/Precipitation_Estimation/B_Precipitation \
+    #                                                                 --ex_name 001 \
+    #                                                                 --sampling_step 14',
+
+    # 'cd B_Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py --gpus 1 \
+    #                                                                 --task identification \
+    #                                                                 --R_w 10    \
+    #                                                                 --NR_w 10    \
+    #                                                                 --batch_size 1024   \
+    #                                                                 --res_dir /usr/commondata/weather/code/Precipitation_Estimation/B_Precipitation/results \
+    #                                                                 --ex_name 001 \
+    #                                                                 --sampling_step 5\
+    #                                                                 --epoch_s 1\
+    #                                                                 --epoch_e 100',
+
+    # 'cd B_Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py --gpus 1 \
+    #                                                                 --task identification \
+    #                                                                 --R_w 10    \
+    #                                                                 --NR_w 30    \
+    #                                                                 --batch_size 1024   \
+    #                                                                 --res_dir /usr/commondata/weather/code/Precipitation_Estimation/B_Precipitation/results \
+    #                                                                 --ex_name 002 \
+    #                                                                 --sampling_step 5\
+    #                                                                 --epoch_s 1\
+    #                                                                 --epoch_e 100',
+
+    # 'cd B_Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py --gpus 1 \
+    #                                                                 --task identification \
+    #                                                                 --R_w 10    \
+    #                                                                 --NR_w 50    \
+    #                                                                 --batch_size 1024   \
+    #                                                                 --res_dir /usr/commondata/weather/code/Precipitation_Estimation/B_Precipitation/results \
+    #                                                                 --ex_name 003 \
+    #                                                                 --sampling_step 5\
+    #                                                                 --epoch_s 1\
+    #                                                                 --epoch_e 100',
+    
+    # 'cd B_Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py --gpus 1 \
+    #                                                                 --task identification \
+    #                                                                 --R_w 30    \
+    #                                                                 --NR_w 10    \
+    #                                                                 --batch_size 1024   \
+    #                                                                 --res_dir /usr/commondata/weather/code/Precipitation_Estimation/B_Precipitation/results \
+    #                                                                 --ex_name 004 \
+    #                                                                 --sampling_step 5\
+    #                                                                 --epoch_s 1\
+    #                                                                 --epoch_e 100',
+    
+    # 'cd B_Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py --gpus 1 \
+    #                                                                 --task identification \
+    #                                                                 --R_w 50    \
+    #                                                                 --NR_w 10    \
+    #                                                                 --batch_size 1024   \
+    #                                                                 --res_dir /usr/commondata/weather/code/Precipitation_Estimation/B_Precipitation/results \
+    #                                                                 --ex_name 005 \
+    #                                                                 --sampling_step 5\
+    #                                                                 --epoch_s 1\
+    #                                                                 --epoch_e 100',
+# ]
+
+
 cmd=[
-    'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py --gpus 1 \
-                                                                    --task identification \
-                                                                    --train_R 100000   \
-                                                                    --train_NR 500000   \
-                                                                    --batch_size 1024   \
-                                                                    --res_dir ./results \
-                                                                    --ex_name 008',
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py     --gpus 1 \
+    #                                                                     --task estimation  \
+    #                                                                     --w_kl_C 0,0,100 0,10,100 \
+    #                                                                     --w_ed_C 1,1,200 \
+    #                                                                     --train_R 100000   \
+    #                                                                     --batch_size 1024   \
+    #                                                                     --res_dir ./results \
+    #                                                                     --ex_name changew2/001 \
+    #                                                                     --epoch_s 1 \
+    #                                                                     --epoch_e 100 \
+    #                                                                     --patience 100 \
+    #                                                                     --hdelta 2.5',
+    
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py     --gpus 1 \
+    #                                                                     --task estimation  \
+    #                                                                     --w_kl_C 0,0,100 0,10,100 \
+    #                                                                     --w_ed_C 1,1,200 \
+    #                                                                     --train_R 100000   \
+    #                                                                     --batch_size 1024   \
+    #                                                                     --res_dir ./results \
+    #                                                                     --ex_name changew2/002 \
+    #                                                                     --epoch_s 1 \
+    #                                                                     --epoch_e 100 \
+    #                                                                     --patience 100 \
+    #                                                                     --hdelta 5',
+    
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py     --gpus 1 \
+    #                                                                     --task estimation  \
+    #                                                                     --w_kl_C 0,0,100 0,10,100 \
+    #                                                                     --w_ed_C 1,1,200 \
+    #                                                                     --train_R 100000   \
+    #                                                                     --batch_size 1024   \
+    #                                                                     --res_dir ./results \
+    #                                                                     --ex_name changew2/003 \
+    #                                                                     --epoch_s 1 \
+    #                                                                     --epoch_e 100 \
+    #                                                                     --patience 100 \
+    #                                                                     --hdelta 7.5',
+
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py     --gpus 1 \
+    #                                                                     --task estimation  \
+    #                                                                     --w_kl_C 0,0,100 0,10,100 \
+    #                                                                     --w_ed_C 1,1,200 \
+    #                                                                     --train_R 100000   \
+    #                                                                     --batch_size 1024   \
+    #                                                                     --res_dir ./results \
+    #                                                                     --ex_name changew2/004 \
+    #                                                                     --epoch_s 1 \
+    #                                                                     --epoch_e 100 \
+    #                                                                     --patience 100 \
+    #                                                                     --hdelta 10',
+
+
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py     --gpus 1 \
+    #                                                                     --task estimation  \
+    #                                                                     --w_kl_C 0,0,100 \
+    #                                                                     --w_ed_C 1,1,200 \
+    #                                                                     --train_R 100000   \
+    #                                                                     --batch_size 1024   \
+    #                                                                     --res_dir ./results \
+    #                                                                     --ex_name changew3/001 \
+    #                                                                     --epoch_s 1 \
+    #                                                                     --epoch_e 100 \
+    #                                                                     --patience 100 \
+    #                                                                     --hdelta 2.5',
+    
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py     --gpus 1 \
+    #                                                                     --task estimation  \
+    #                                                                     --w_kl_C 0,0,100 \
+    #                                                                     --w_ed_C 1,1,200 \
+    #                                                                     --train_R 100000   \
+    #                                                                     --batch_size 1024   \
+    #                                                                     --res_dir ./results \
+    #                                                                     --ex_name changew3/002 \
+    #                                                                     --epoch_s 1 \
+    #                                                                     --epoch_e 100 \
+    #                                                                     --patience 100 \
+    #                                                                     --hdelta 5',
+    
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py     --gpus 1 \
+    #                                                                     --task estimation  \
+    #                                                                     --w_kl_C 0,0,100 \
+    #                                                                     --w_ed_C 1,1,200 \
+    #                                                                     --train_R 100000   \
+    #                                                                     --batch_size 1024   \
+    #                                                                     --res_dir ./results \
+    #                                                                     --ex_name changew3/003 \
+    #                                                                     --epoch_s 1 \
+    #                                                                     --epoch_e 100 \
+    #                                                                     --patience 100 \
+    #                                                                     --hdelta 7.5',
+
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py     --gpus 1 \
+    #                                                                     --task estimation  \
+    #                                                                     --w_kl_C 0,0,100 \
+    #                                                                     --w_ed_C 1,1,200 \
+    #                                                                     --train_R 100000   \
+    #                                                                     --batch_size 1024   \
+    #                                                                     --res_dir ./results \
+    #                                                                     --ex_name changew3/004 \
+    #                                                                     --epoch_s 1 \
+    #                                                                     --epoch_e 100 \
+    #                                                                     --patience 100 \
+    #                                                                     --hdelta 10',
+
+
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py     --gpus 1 \
+    #                                                                     --task estimation  \
+    #                                                                     --w_kl_C 0,0,100 \
+    #                                                                     --w_ed_C 1,1,200 \
+    #                                                                     --train_R 100000   \
+    #                                                                     --batch_size 1024   \
+    #                                                                     --res_dir ./results \
+    #                                                                     --ex_name changew3/005 \
+    #                                                                     --epoch_s 1 \
+    #                                                                     --epoch_e 100 \
+    #                                                                     --patience 100 \
+    #                                                                     --hdelta 12.5\
+    #                                                                     ',
+    
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py     --gpus 1 \
+    #                                                                     --task estimation  \
+    #                                                                     --w_kl_C 0,0,100 \
+    #                                                                     --w_ed_C 1,1,200 \
+    #                                                                     --train_R 100000   \
+    #                                                                     --batch_size 1024   \
+    #                                                                     --res_dir ./results \
+    #                                                                     --ex_name changew3/006 \
+    #                                                                     --epoch_s 1 \
+    #                                                                     --epoch_e 100 \
+    #                                                                     --patience 100 \
+    #                                                                     --hdelta 15\
+    #                                                                     ',
+
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py     --gpus 1 \
+    #                                                                     --task estimation  \
+    #                                                                     --w_kl_C 0,0,100 \
+    #                                                                     --w_ed_C 1,1,200 \
+    #                                                                     --train_R 100000   \
+    #                                                                     --batch_size 1024   \
+    #                                                                     --res_dir ./results \
+    #                                                                     --ex_name changew3/007 \
+    #                                                                     --epoch_s 1 \
+    #                                                                     --epoch_e 100 \
+    #                                                                     --patience 100 \
+    #                                                                     --hdelta 20\
+    #                                                                     ',
+    
+    'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py     --gpus 1 \
+                                                                        --task estimation  \
+                                                                        --w_kl_C 0,0,100 \
+                                                                        --w_ed_C 1,1,200 \
+                                                                        --train_R 100000   \
+                                                                        --batch_size 1024   \
+                                                                        --res_dir ./results \
+                                                                        --ex_name changew3/008 \
+                                                                        --epoch_s 1 \
+                                                                        --epoch_e 100 \
+                                                                        --patience 100 \
+                                                                        --hdelta 25\
+                                                                        ',
 ]
 
 min_gpu_memory=12
@@ -253,7 +474,7 @@ def get_memory(gpuid):
 if __name__ =='__main__':
     signal.signal(signal.SIGTERM, term)#注册信号量，使得在终端杀死主进程时，子进程也被杀死
     
-    gpus=[0,1,2,3,4,5,6,7]
+    gpus=[7]
     gpustate=Manager().dict({i:get_memory(i) for i in gpus})
     processes=[]
     idx=0
