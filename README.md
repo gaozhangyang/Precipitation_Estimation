@@ -43,9 +43,11 @@
 
 [supplementary materials of iden experiments](https://westlakeu-my.sharepoint.com/:f:/g/personal/gaozhangyang_westlake_edu_cn/ErUPhGHNTTlNlyWDbHbiNV0Bt50DFCll9JZPkBGzQ4y_og?e=PcyYrO)
 
+<video name="val_iden_005" src="https://github.com/gaozhangyang/Precipitation_Estimation/blob/master/gitfigure/val_iden_005.mp4" width="800px" height="600px" controls="controls"></video>
+
 <center>
 
-| Name(iden) | Acc0 | Acc1 |
+| Name(iden,val) | Acc0 | Acc1 |
 |:--|:--:|:--:|
 | 001(NR/R=200000/50000)    |	0.8898 |	0.8950 |
 | 002(200000/100000)        |	0.8894 |	0.9022 |
@@ -61,9 +63,11 @@
 
 [supplementary materials of iden experiments](https://westlakeu-my.sharepoint.com/:f:/g/personal/gaozhangyang_westlake_edu_cn/Emr80jHzY2JOi35Puq2tQo4BBN0t39A7caTFXlja1qwUrQ?e=lzHaNN)
 
+<video name="val_esti_013" src="https://github.com/gaozhangyang/Precipitation_Estimation/blob/master/gitfigure/val_esti_013.mp4" width="800px" height="600px" controls="controls"></video>
+
 <center>
 
-| Name(esti) | CC | BIAS | MSE | Acc0 | Acc1 |
+| Name(esti,val) | CC | BIAS | MSE | Acc0 | Acc1 |
 |:--|:--:|:--:|:--:|:--:|:--:|
 | 001(huber 2.5)    |0.3579	|0.5256	|0.5683	|0.9336	|0.8044|
 | 002(huber 5)	    |0.3627	|0.7709	|0.5934	|0.9336	|0.8044|
