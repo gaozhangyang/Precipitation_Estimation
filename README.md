@@ -43,7 +43,7 @@
 
 [supplementary materials of iden experiments](https://westlakeu-my.sharepoint.com/:f:/g/personal/gaozhangyang_westlake_edu_cn/ErUPhGHNTTlNlyWDbHbiNV0Bt50DFCll9JZPkBGzQ4y_og?e=PcyYrO)
 
-<video src="video.mp4" width="320" height="200" controls preload></video>
+![]()
 
 <center>
 

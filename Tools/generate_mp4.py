@@ -514,11 +514,11 @@ class Draw:
 
 if __name__ == '__main__':
     draw = Draw()
-    # draw.generate_XY_MP4(train_path='/usr/commondata/weather/dataset_release/IR_dataset_QingHua/',
-    #                     data_X='X_val_hourly.npz',
-    #                     data_Y='Y_val_hourly.npz',
-    #                     save_path='/usr/commondata/weather/code/Precipitation_Estimation/results/Visualization/val_center_above_10',
-    #                     save_name='XY_val')
+    draw.generate_XY_MP4(train_path='/usr/commondata/weather/dataset_release/IR_dataset_QingHua/',
+                        data_X='X_val_hourly.npz',
+                        data_Y='Y_val_hourly.npz',
+                        save_path='/usr/commondata/weather/code/Precipitation_Estimation/results/Visualization/val_center_above_10',
+                        save_name='XY_val')
 
     # cmd=[
     #         {'iden_model_path':'/usr/commondata/weather/code/Precipitation_Estimation/results/identification/001/epoch_2_step_2.pt',
@@ -766,31 +766,31 @@ if __name__ == '__main__':
     #         },
     #     ]
 
-    cmd=[
-            {'iden_model_path':'/usr/commondata/weather/code/Precipitation_Estimation/results/identification/005/epoch_28_step_28.pt',
-            'esti_model_path':'',
-            'train_path':'/usr/commondata/weather/dataset_release/IR_dataset_QingHua/',
-            'step':14,
-            'data_X':'X_val_hourly.npz',
-            'data_Y':'Y_val_hourly.npz',
-            'save_path':'/usr/commondata/weather/code/Precipitation_Estimation/results/Visualization/final_iden_val',
-            'save_name':'val',
-            'specify_task':'identification',
-            'logstep':1
-            },
+    # cmd=[
+    #         {'iden_model_path':'/usr/commondata/weather/code/Precipitation_Estimation/results/identification/005/epoch_28_step_28.pt',
+    #         'esti_model_path':'',
+    #         'train_path':'/usr/commondata/weather/dataset_release/IR_dataset_QingHua/',
+    #         'step':14,
+    #         'data_X':'X_val_hourly.npz',
+    #         'data_Y':'Y_val_hourly.npz',
+    #         'save_path':'/usr/commondata/weather/code/Precipitation_Estimation/results/Visualization/final_iden_val',
+    #         'save_name':'val',
+    #         'specify_task':'identification',
+    #         'logstep':1
+    #         },
 
-            {'iden_model_path':'/usr/commondata/weather/code/Precipitation_Estimation/results/identification/005/epoch_28_step_28.pt',
-             'esti_model_path':'/usr/commondata/weather/code/Precipitation_Estimation/results/estimation/changew3/013/epoch_75.pt',
-             'train_path':'/usr/commondata/weather/dataset_release/IR_dataset_QingHua/',
-             'step':14,
-             'data_X':'X_val_hourly.npz',
-             'data_Y':'Y_val_hourly.npz',
-             'save_path':'/usr/commondata/weather/code/Precipitation_Estimation/results/Visualization/final_esti_val',
-             'save_name':'val',
-             'specify_task':'estimation',
-             'logstep':1
-            },
-    ]
+    #         {'iden_model_path':'/usr/commondata/weather/code/Precipitation_Estimation/results/identification/005/epoch_28_step_28.pt',
+    #          'esti_model_path':'/usr/commondata/weather/code/Precipitation_Estimation/results/estimation/changew3/013/epoch_75.pt',
+    #          'train_path':'/usr/commondata/weather/dataset_release/IR_dataset_QingHua/',
+    #          'step':14,
+    #          'data_X':'X_val_hourly.npz',
+    #          'data_Y':'Y_val_hourly.npz',
+    #          'save_path':'/usr/commondata/weather/code/Precipitation_Estimation/results/Visualization/final_esti_val',
+    #          'save_name':'val',
+    #          'specify_task':'estimation',
+    #          'logstep':1
+    #         },
+    # ]
 
-    for i in range(0,2):
-        draw.generate_final_surface_MP4(**cmd[i])
+    # for i in range(0,2):
+    #     draw.generate_final_surface_MP4(**cmd[i])
