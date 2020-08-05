@@ -1,7 +1,9 @@
 # Infrared Precipitation Estimation
 
 # 1. Framework
+![](https://github.com/gaozhangyang/Precipitation_Estimation/blob/master/gitfigure/pipline.png)
 
+![](https://github.com/gaozhangyang/Precipitation_Estimation/blob/master/gitfigure/network_structure.png)
 
 # 2. Usage
 
