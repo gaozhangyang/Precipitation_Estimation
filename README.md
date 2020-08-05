@@ -5,7 +5,29 @@
 
 ![](https://github.com/gaozhangyang/Precipitation_Estimation/blob/master/gitfigure/network_structure.png)
 
-# 2. Usage
+# 2. Dataset
+
+<center>
+
+| region | scope |
+|:--:|:--:|
+| RegC | 30N-45N, 90W-105W |
+| RegW | 35N-40N, 110W-115W|
+| RegE | 35N-40N, 80W-85W  |
+
+</center>
+
+<center>
+
+| training set | evaluating set | testing set |
+|:--:|:--:|:--:|
+| RegC, June to July 2012   | RegC, August,2012 |   |
+|                           |                       | RegC,June to August, 2014 <br> RegC,December 2012 to February 2013 |
+|                           |                       | RegW and RegE, June to August 2012 |
+
+<center>
+
+# 3. Usage
 
  1. train
 	```python
@@ -17,7 +39,7 @@
 	 python generate_mp4.py
 	 ```
 
-# 3.Performence
+# 4. Performence
 
 [supplementary materials of iden experiments](https://westlakeu-my.sharepoint.com/:f:/g/personal/gaozhangyang_westlake_edu_cn/ErUPhGHNTTlNlyWDbHbiNV0Bt50DFCll9JZPkBGzQ4y_og?e=PcyYrO)
 
@@ -60,3 +82,21 @@
 | 015(huber 10+KL)	|0.2974	|0.2311	|0.7527	|0.9458	|0.7113|
 
 </center>
+
+# 5. citation
+```
+{
+    %0 Journal Article
+    %T Infrared Precipitation Estimation Using Convolutional Neural Network
+    %P 1-14
+    %U https://ieeexplore.ieee.org/document/9085928/
+    %G en
+    %J IEEE Transactions on Geoscience and Remote Sensing
+    %A Wang, Cunguang
+    %A Xu, Jing
+    %A Tang, Guoqiang
+    %A Yang, Yi
+    %A Hong, Yang
+    %D 2020
+}
+```
