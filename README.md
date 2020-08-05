@@ -2,19 +2,19 @@
 
 # 1. Framework
 
-<div style="align: center">
+<center>
 
 ![](https://github.com/gaozhangyang/Precipitation_Estimation/blob/master/gitfigure/pipline.png "pipeline")
 
 ![](https://github.com/gaozhangyang/Precipitation_Estimation/blob/master/gitfigure/network_structure.png "network structure")
 
-</div>
+</center>
 
 # 2. Dataset
+<center>
 
 ![](https://github.com/gaozhangyang/Precipitation_Estimation/blob/master/gitfigure/XY_val.gif "XY_val")
 
-<div style="align: center">
 
 | region | scope |
 |:--:|:--:|
@@ -29,7 +29,7 @@
 |                           |                       | RegC,June to August, 2014 <br> RegC,December 2012 to February 2013 |
 |                           |                       | RegW and RegE, June to August 2012 |
 
-</div>
+</center>
 
 # 3. Usage
 
@@ -45,11 +45,13 @@
 
 # 4. Performence
 
-<div style="align: center">
+<center>
 
 ![](https://github.com/gaozhangyang/Precipitation_Estimation/blob/master/gitfigure/val_iden_005.gif "val_iden_005") 
 
+
 [supplementary materials of iden experiments](https://westlakeu-my.sharepoint.com/:f:/g/personal/gaozhangyang_westlake_edu_cn/ErUPhGHNTTlNlyWDbHbiNV0Bt50DFCll9JZPkBGzQ4y_og?e=PcyYrO)
+
 
 | Name(iden,val) | Acc0 | Acc1 |
 |:--|:--:|:--:|
@@ -61,11 +63,11 @@
 | 006(300000/50000)         |	0.9389 |	0.7840 |
 | 007(500000/100000)        |	0.9320 |	0.8092 |
 
-</div>
+</center>
 
 
 
-<div style="align: center">
+<center>
 
 ![](https://github.com/gaozhangyang/Precipitation_Estimation/blob/master/gitfigure/val_esti_013.gif "val_esti_013")
 
@@ -90,7 +92,7 @@
 | 014(huber 7.5+KL)	|0.2447	|0.3118	|0.8018	|0.9494	|0.6736|
 | 015(huber 10+KL)	|0.2974	|0.2311	|0.7527	|0.9458	|0.7113|
 
-</div>
+</center>
 
 # 5. citation
 ```
