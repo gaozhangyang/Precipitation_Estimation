@@ -63,7 +63,7 @@
 
 [supplementary materials of iden experiments](https://westlakeu-my.sharepoint.com/:f:/g/personal/gaozhangyang_westlake_edu_cn/Emr80jHzY2JOi35Puq2tQo4BBN0t39A7caTFXlja1qwUrQ?e=lzHaNN)
 
-<video src="https://github.com/gaozhangyang/Precipitation_Estimation/blob/master/gitfigure/val_esti_013.mp4" width="800px" height="600px" controls="controls"></video>
+<video src="./gitfigure/val_iden_005.mp4" width="800px" height="600px" controls="controls"></video>
 
 <center>
 
