@@ -1,11 +1,13 @@
 # Infrared Precipitation Estimation
 
 # 1. Framework
-![](https://github.com/gaozhangyang/Precipitation_Estimation/blob/master/gitfigure/pipline.png)
+![](https://github.com/gaozhangyang/Precipitation_Estimation/blob/master/gitfigure/pipline.png "pipeline")
 
-![](https://github.com/gaozhangyang/Precipitation_Estimation/blob/master/gitfigure/network_structure.png)
+![](https://github.com/gaozhangyang/Precipitation_Estimation/blob/master/gitfigure/network_structure.png "network structure")
 
 # 2. Dataset
+
+![](https://github.com/gaozhangyang/Precipitation_Estimation/blob/master/gitfigure/XY_val.gif "XY_val")
 
 <center>
 
@@ -41,9 +43,9 @@
 
 # 4. Performence
 
-[supplementary materials of iden experiments](https://westlakeu-my.sharepoint.com/:f:/g/personal/gaozhangyang_westlake_edu_cn/ErUPhGHNTTlNlyWDbHbiNV0Bt50DFCll9JZPkBGzQ4y_og?e=PcyYrO)
+![](https://github.com/gaozhangyang/Precipitation_Estimation/blob/master/gitfigure/val_iden_005.gif "val_iden_005")
 
-![]()
+[supplementary materials of iden experiments](https://westlakeu-my.sharepoint.com/:f:/g/personal/gaozhangyang_westlake_edu_cn/ErUPhGHNTTlNlyWDbHbiNV0Bt50DFCll9JZPkBGzQ4y_og?e=PcyYrO)
 
 <center>
 
@@ -61,8 +63,10 @@
 
 
 
-[supplementary materials of iden experiments](https://westlakeu-my.sharepoint.com/:f:/g/personal/gaozhangyang_westlake_edu_cn/Emr80jHzY2JOi35Puq2tQo4BBN0t39A7caTFXlja1qwUrQ?e=lzHaNN)
 
+![](https://github.com/gaozhangyang/Precipitation_Estimation/blob/master/gitfigure/val_esti_013.gif "val_esti_013")
+
+[supplementary materials of iden experiments](https://westlakeu-my.sharepoint.com/:f:/g/personal/gaozhangyang_westlake_edu_cn/Emr80jHzY2JOi35Puq2tQo4BBN0t39A7caTFXlja1qwUrQ?e=lzHaNN)
 
 <center>
 
