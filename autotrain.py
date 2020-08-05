@@ -443,6 +443,47 @@ cmd = [
     #                                                                     --hdelta 25\
     #                                                                     ',
 
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py     --gpus 1 \
+    #                                                                     --task estimation  \
+    #                                                                     --w_kl_C 0,0,300 0,10,300 \
+    #                                                                     --w_ed_C 1,1,200 \
+    #                                                                     --train_R 100000   \
+    #                                                                     --batch_size 1024   \
+    #                                                                     --res_dir /usr/commondata/weather/code/Precipitation_Estimation/results \
+    #                                                                     --ex_name changew3/009 \
+    #                                                                     --epoch_s 1 \
+    #                                                                     --epoch_e 100 \
+    #                                                                     --patience 100 \
+    #                                                                     --hdelta 12.5',
+
+
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py     --gpus 1 \
+    #                                                                     --task estimation  \
+    #                                                                     --w_kl_C 0,0,300 0,10,300 \
+    #                                                                     --w_ed_C 1,1,200 \
+    #                                                                     --train_R 100000   \
+    #                                                                     --batch_size 1024   \
+    #                                                                     --res_dir /usr/commondata/weather/code/Precipitation_Estimation/results \
+    #                                                                     --ex_name changew3/010 \
+    #                                                                     --epoch_s 1 \
+    #                                                                     --epoch_e 100 \
+    #                                                                     --patience 100 \
+    #                                                                     --hdelta 20\
+    #                                                                     ',
+
+    # 'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py     --gpus 1 \
+    #                                                                     --task estimation  \
+    #                                                                     --w_kl_C 0,0,300 0,10,300 \
+    #                                                                     --w_ed_C 1,1,200 \
+    #                                                                     --train_R 100000   \
+    #                                                                     --batch_size 1024   \
+    #                                                                     --res_dir /usr/commondata/weather/code/Precipitation_Estimation/results \
+    #                                                                     --ex_name changew3/011 \
+    #                                                                     --epoch_s 1 \
+    #                                                                     --epoch_e 100 \
+    #                                                                     --patience 100 \
+    #                                                                     --hdelta 25',
+
     'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py     --gpus 1 \
                                                                         --task estimation  \
                                                                         --w_kl_C 0,0,300 0,10,300 \
@@ -450,13 +491,12 @@ cmd = [
                                                                         --train_R 100000   \
                                                                         --batch_size 1024   \
                                                                         --res_dir /usr/commondata/weather/code/Precipitation_Estimation/results \
-                                                                        --ex_name changew3/009 \
+                                                                        --ex_name changew3/012 \
                                                                         --epoch_s 1 \
                                                                         --epoch_e 100 \
                                                                         --patience 100 \
-                                                                        --hdelta 12.5',
-
-
+                                                                        --hdelta 2.5',
+    
     'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py     --gpus 1 \
                                                                         --task estimation  \
                                                                         --w_kl_C 0,0,300 0,10,300 \
@@ -464,13 +504,12 @@ cmd = [
                                                                         --train_R 100000   \
                                                                         --batch_size 1024   \
                                                                         --res_dir /usr/commondata/weather/code/Precipitation_Estimation/results \
-                                                                        --ex_name changew3/010 \
+                                                                        --ex_name changew3/013 \
                                                                         --epoch_s 1 \
                                                                         --epoch_e 100 \
                                                                         --patience 100 \
-                                                                        --hdelta 20\
-                                                                        ',
-
+                                                                        --hdelta 5',
+    
     'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py     --gpus 1 \
                                                                         --task estimation  \
                                                                         --w_kl_C 0,0,300 0,10,300 \
@@ -478,11 +517,25 @@ cmd = [
                                                                         --train_R 100000   \
                                                                         --batch_size 1024   \
                                                                         --res_dir /usr/commondata/weather/code/Precipitation_Estimation/results \
-                                                                        --ex_name changew3/011 \
+                                                                        --ex_name changew3/014 \
                                                                         --epoch_s 1 \
                                                                         --epoch_e 100 \
                                                                         --patience 100 \
-                                                                        --hdelta 25',
+                                                                        --hdelta 7.5',
+    
+    'cd Precipitation\nCUDA_VISIBLE_DEVICES={}'+ ' python train2.py     --gpus 1 \
+                                                                        --task estimation  \
+                                                                        --w_kl_C 0,0,300 0,10,300 \
+                                                                        --w_ed_C 1,1,200 \
+                                                                        --train_R 100000   \
+                                                                        --batch_size 1024   \
+                                                                        --res_dir /usr/commondata/weather/code/Precipitation_Estimation/results \
+                                                                        --ex_name changew3/015 \
+                                                                        --epoch_s 1 \
+                                                                        --epoch_e 100 \
+                                                                        --patience 100 \
+                                                                        --hdelta 10',
+
 ]
 
 min_gpu_memory = 12
@@ -515,7 +568,7 @@ def get_memory(gpuid):
 if __name__ == '__main__':
     signal.signal(signal.SIGTERM, term)  # 注册信号量，使得在终端杀死主进程时，子进程也被杀死
 
-    gpus = [1,2,3]
+    gpus = [0,1,2,3,4,5,6,7]
     gpustate = Manager().dict({i: get_memory(i) for i in gpus})
     processes = []
     idx = 0

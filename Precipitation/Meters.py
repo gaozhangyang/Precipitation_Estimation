@@ -58,8 +58,9 @@ class BinaryClsMeter(object):
             if self.task == 'estimation':
                 conv = np.cov([self.y_true, self.y_pred])
                 CC = conv[0, 1] / np.sqrt(conv[0, 0] * conv[1, 1])
-                BIAS = np.sum(np.array(self.y_pred) -
-                              np.array(self.y_true)) / np.sum(self.y_true)
+
+                BIAS = np.sum(np.array(self.y_pred) -np.array(self.y_true)) / np.sum(self.y_true)
+
                 MSE = np.mean(
                         (np.array(self.y_pred) - np.array(self.y_true))**2
                         )
