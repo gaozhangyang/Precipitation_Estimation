@@ -1,12 +1,12 @@
 # Prerequisites
 ```
-pip install torchnet tensorboardX tensorboard
+pip install torchnet tensorboardX tensorboard tenserflow
 pip install opencv-python
 ```
 
 # Usage
 ```
-sh run_modis.sh
+python main.py
 ```
 
 # tensorboard visualization
