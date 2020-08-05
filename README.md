@@ -71,7 +71,7 @@
 
 ![](https://github.com/gaozhangyang/Precipitation_Estimation/blob/master/gitfigure/val_esti_013.gif "val_esti_013")
 
-[supplementary materials of iden experiments](https://westlakeu-my.sharepoint.com/:f:/g/personal/gaozhangyang_westlake_edu_cn/Emr80jHzY2JOi35Puq2tQo4BBN0t39A7caTFXlja1qwUrQ?e=lzHaNN)
+[supplementary materials of esti experiments](https://westlakeu-my.sharepoint.com/:f:/g/personal/gaozhangyang_westlake_edu_cn/Emr80jHzY2JOi35Puq2tQo4BBN0t39A7caTFXlja1qwUrQ?e=lzHaNN)
 
 
 | Name(esti,val) | CC | BIAS | MSE | Acc0 | Acc1 |
