@@ -1,0 +1,44 @@
+{
+  "pascal":
+  {
+    "data_path": "./datasets/VOC2012_orig/"
+  },
+
+  "sbd":
+  {
+    "data_path": "/home/hus/working/datasets/VOC_aug/"
+  },
+
+  "camvid":
+  {
+    "data_path": "./datasets/CamVid/"
+  },
+  "ade20k":
+  {
+    "data_path": "/Users/meet/data/ADE20K_2016_07_26/"
+  },
+  "mit_sceneparsing_benchmark":
+  {
+    "data_path": "/home/ubuntu/DATA/ADEChallengeData2016/"
+  },
+  "cityscapesAB":
+  {
+    "data_path": "./datasets/cityscapes_AB/"
+  },
+  "horse":
+  {
+    "data_path": "./datasets/horse_32x32/"
+  },
+  "m2nist":
+  {
+    "data_path": "./datasets/m2nist/"
+  },
+  "modis":
+  {
+    "data_path": "dataloaders/datasets/"
+  },
+  "goes":
+  {
+    "data_path": "/usr/commondata/weather/dataset_release/IR_dataset_QingHua/"
+  }
+}
