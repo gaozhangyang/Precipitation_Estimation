@@ -1,15 +1,20 @@
 # Infrared Precipitation Estimation
 
 # 1. Framework
+
+<div style="align: center">
+
 ![](https://github.com/gaozhangyang/Precipitation_Estimation/blob/master/gitfigure/pipline.png "pipeline")
 
 ![](https://github.com/gaozhangyang/Precipitation_Estimation/blob/master/gitfigure/network_structure.png "network structure")
+
+</div>
 
 # 2. Dataset
 
 ![](https://github.com/gaozhangyang/Precipitation_Estimation/blob/master/gitfigure/XY_val.gif "XY_val")
 
-<center>
+<div style="align: center">
 
 | region | scope |
 |:--:|:--:|
@@ -17,9 +22,6 @@
 | RegW | 35N-40N, 110W-115W|
 | RegE | 35N-40N, 80W-85W  |
 
-</center>
-
-<center>
 
 | training set | evaluating set | testing set |
 |:--:|:--:|:--:|
@@ -27,7 +29,7 @@
 |                           |                       | RegC,June to August, 2014 <br> RegC,December 2012 to February 2013 |
 |                           |                       | RegW and RegE, June to August 2012 |
 
-<center>
+</div>
 
 # 3. Usage
 
@@ -43,11 +45,11 @@
 
 # 4. Performence
 
-![](https://github.com/gaozhangyang/Precipitation_Estimation/blob/master/gitfigure/val_iden_005.gif "val_iden_005")
+<div style="align: center">
+
+![](https://github.com/gaozhangyang/Precipitation_Estimation/blob/master/gitfigure/val_iden_005.gif "val_iden_005") 
 
 [supplementary materials of iden experiments](https://westlakeu-my.sharepoint.com/:f:/g/personal/gaozhangyang_westlake_edu_cn/ErUPhGHNTTlNlyWDbHbiNV0Bt50DFCll9JZPkBGzQ4y_og?e=PcyYrO)
-
-<center>
 
 | Name(iden,val) | Acc0 | Acc1 |
 |:--|:--:|:--:|
@@ -59,16 +61,16 @@
 | 006(300000/50000)         |	0.9389 |	0.7840 |
 | 007(500000/100000)        |	0.9320 |	0.8092 |
 
-</center>
+</div>
 
 
 
+<div style="align: center">
 
 ![](https://github.com/gaozhangyang/Precipitation_Estimation/blob/master/gitfigure/val_esti_013.gif "val_esti_013")
 
 [supplementary materials of iden experiments](https://westlakeu-my.sharepoint.com/:f:/g/personal/gaozhangyang_westlake_edu_cn/Emr80jHzY2JOi35Puq2tQo4BBN0t39A7caTFXlja1qwUrQ?e=lzHaNN)
 
-<center>
 
 | Name(esti,val) | CC | BIAS | MSE | Acc0 | Acc1 |
 |:--|:--:|:--:|:--:|:--:|:--:|
@@ -88,7 +90,7 @@
 | 014(huber 7.5+KL)	|0.2447	|0.3118	|0.8018	|0.9494	|0.6736|
 | 015(huber 10+KL)	|0.2974	|0.2311	|0.7527	|0.9458	|0.7113|
 
-</center>
+</div>
 
 # 5. citation
 ```
