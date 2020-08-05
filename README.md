@@ -1,6 +1,6 @@
 # Prerequisites
 ```
-pip install torchnet tensorboardX tensorboard tenserflow
+pip install torchnet tensorboardX tensorboard tensorflow
 pip install opencv-python
 ```
 
