@@ -359,7 +359,10 @@ class Draw:
 
         #######################generate samples################
         H = len(range(14, 375 - 15, step))
+        W = len(range(14, 375 - 15, step))
+        print(H,W)
         L = H**2 * GOSE.shape[0]
+        print(L)
         test_X = torch.zeros(L, 3, 29, 29)
         test_Y = np.zeros(L)
         N = 0
@@ -378,6 +381,7 @@ class Draw:
                                              Y=test_Y,
                                              iden_model_path=iden_model_path,
                                              esti_model_path=esti_model_path,
+                                             batch_size=200000,
                                              step=step,
                                              save_path=save_path,
                                              save_name=save_name,
@@ -436,7 +440,7 @@ class Draw:
                          Y,
                          iden_model_path,
                          esti_model_path,
-                         batch_size=100000,
+                         batch_size=300000,
                          step=14,
                          save_path='',
                          save_name='',
@@ -452,7 +456,7 @@ class Draw:
                              norm_layer=nn.BatchNorm2d,
                              task='identification')
         iden_model = torch.nn.DataParallel(iden_model.to('cuda'),
-                                           device_ids=[0,1,2,3,4,5,6,7])
+                                           device_ids=[0,1,4,5,6,7])
         iden_state_dict = torch.load(iden_model_path)
         if specify_task == 'estimation':
             esti_model = IPECNet(nc=[1, 16, 16, 32, 32],
@@ -460,7 +464,7 @@ class Draw:
                                  norm_layer=nn.BatchNorm2d,
                                  task='estimation')
             esti_model = torch.nn.DataParallel(esti_model.to('cuda'),
-                                               device_ids=[0,1,2,3,4,5,6,7])
+                                               device_ids=[0,1,4,5,6,7])
             esti_state_dict = torch.load(esti_model_path)
 
         if multi_gpu:
@@ -514,11 +518,11 @@ class Draw:
 
 if __name__ == '__main__':
     draw = Draw()
-    draw.generate_XY_MP4(train_path='/usr/commondata/weather/dataset_release/IR_dataset_QingHua/',
-                        data_X='X_val_hourly.npz',
-                        data_Y='Y_val_hourly.npz',
-                        save_path='/usr/commondata/weather/code/Precipitation_Estimation/results/Visualization/val_center_above_10',
-                        save_name='XY_val')
+    # draw.generate_XY_MP4(train_path='/usr/commondata/weather/dataset_release/IR_dataset_QingHua/',
+    #                     data_X='X_val_hourly.npz',
+    #                     data_Y='Y_val_hourly.npz',
+    #                     save_path='/usr/commondata/weather/code/Precipitation_Estimation/results/Visualization/val_center_above_10',
+    #                     save_name='XY_val')
 
     # cmd=[
     #         {'iden_model_path':'/usr/commondata/weather/code/Precipitation_Estimation/results/identification/001/epoch_2_step_2.pt',
